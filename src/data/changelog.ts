@@ -1,4 +1,4 @@
-export type ChangelogType = "新增" | "优化" | "说明";
+export type ChangelogType = "功能优化" | "视觉优化" | "视觉调整" | "优化" | "数据安全" | "修复" | "新增";
 
 export interface ChangelogEntry {
   date: string;
@@ -6,32 +6,81 @@ export interface ChangelogEntry {
   type: ChangelogType;
   modules: string[];
   summary: string;
-  status: "模板内容";
+  status: "待提交" | "已推送";
 }
 
 export const changelogEntries: ChangelogEntry[] = [
   {
-    date: "模板版本 1",
-    title: "开源模板初始化",
-    type: "新增",
-    modules: ["演示数据", "localStorage", "项目文档"],
-    summary: "将仪表板整理为可复用模板，默认仅包含通用演示数据，不包含真实个人工作记录。",
-    status: "模板内容",
+    date: "2026-07-01",
+    title: "例行工作频率规则增强",
+    type: "功能优化",
+    modules: ["工作内容", "例行工作", "localStorage"],
+    summary: "例行工作新增每月频率并支持配置每月执行日，手动频率调整为自定义并支持选择单次执行日期；兼容旧手动模板，缺少日期时不自动生成，同时按模板 ID 与计划日期优化生成防重复。",
+    status: "待提交",
   },
   {
-    date: "模板版本 1",
-    title: "本地数据管理入口",
+    date: "2026-06-18",
+    title: "项目看板视觉居中优化",
+    type: "视觉优化",
+    modules: ["首页", "项目看板"],
+    summary: "优化工作项目看板和个人项目看板中环形图与图例的整体居中布局，收紧环形图中心百分比与平均进度文字间距，使看板视觉重心更平衡。",
+    status: "已推送",
+  },
+  {
+    date: "2026-06-17",
+    title: "例行工作与管理交互优化",
+    type: "功能优化",
+    modules: ["工作内容", "例行工作", "分类管理", "项目管理"],
+    summary: "新增例行工作模块，支持按每天、工作日、每周规则自动生成今日工作并防重复；分类管理弹窗改为新增表单与轻表格结构；项目卡片状态支持快捷下拉修改并自动保存。",
+    status: "已推送",
+  },
+  {
+    date: "2026-06-16",
+    title: "快速记录图片预览体验优化",
+    type: "视觉调整",
+    modules: ["首页", "快速记录", "图片附件"],
+    summary: "多张图片改为横向缩略图展示，支持滚动、预览弹窗和单张删除。",
+    status: "已推送",
+  },
+  {
+    date: "2026-06-16",
+    title: "今日工作交互优化",
     type: "优化",
-    modules: ["设置 / 备份", "演示数据"],
-    summary: "提供导入、导出、清空本地数据和恢复演示数据入口，方便使用者试用和重置。",
-    status: "模板内容",
+    modules: ["首页", "今日工作", "状态修改"],
+    summary: "今日工作仅展示当天未完成事项，查看全部改为弹窗，并支持快速修改状态。",
+    status: "已推送",
   },
   {
-    date: "模板版本 1",
-    title: "模板使用说明",
-    type: "说明",
-    modules: ["README", "部署说明"],
-    summary: "补充本地启动、构建、数据存储、GitHub Template、Vercel 和 Cloudflare Pages 部署说明。",
-    status: "模板内容",
+    date: "2026-06-16",
+    title: "本地备份安全增强",
+    type: "数据安全",
+    modules: ["设置 / 备份", "localStorage", "JSON 导入导出"],
+    summary: "新增本地数据状态、容量风险提示、导入前自动备份和导入校验。",
+    status: "已推送",
+  },
+  {
+    date: "2026-06-16",
+    title: "快速记录保存规则调整",
+    type: "修复",
+    modules: ["首页", "快速记录", "附件保存"],
+    summary: "快速记录改为标题必填，正文和图片可选，并支持多张截图作为同一条记录附件保存。",
+    status: "已推送",
+  },
+  {
+    date: "2026-06-15",
+    title: "首页布局和项目概览优化",
+    type: "优化",
+    modules: ["首页", "项目看板", "布局"],
+    summary: "优化首页模块排布和项目概览展示，让工作、日记和项目数据更便于浏览。",
+    status: "已推送",
+  },
+  {
+    date: "2026-06-15",
+    title: "工作完成概览增强",
+    type: "新增",
+    modules: ["首页", "统计", "工作内容"],
+    summary: "增加首页工作完成概览，帮助快速查看当前工作状态分布。",
+    status: "已推送",
   },
 ];
+
