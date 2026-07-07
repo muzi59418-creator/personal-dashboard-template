@@ -51,9 +51,13 @@ function toWorkItemInput(item: WorkItem, status: WorkStatus): WorkItemInput {
     status,
     content: item.content,
     date: item.date,
+    plannedDate: item.plannedDate || "",
     projectId: item.projectId,
     linkedProjectIds: item.linkedProjectIds,
     sourceTemplateId: item.sourceTemplateId,
+    sourceTemplateType: item.sourceTemplateType,
+    sourceTemplateName: item.sourceTemplateName,
     images: item.images,
+    completedAt: item.completedAt,
   };
 }

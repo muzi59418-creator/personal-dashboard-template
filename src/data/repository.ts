@@ -12,12 +12,13 @@ import type {
   ProjectInput,
   RoutineWorkTemplate,
   RoutineWorkTemplateInput,
+  WorkTemplate,
+  WorkTemplateInput,
   WorkResponsibilityGroup,
   WorkItem,
   WorkItemInput,
 } from "../types/dashboard";
 import { createEmptyDashboardData, readDashboard, replaceDashboard, writeDashboard } from "./storage";
-import { createSeedData } from "./seed";
 import { todayInputValue } from "../utils/date";
 
 // 当前实现基于 localStorage，后续可替换为 Supabase / Cloudflare D1 / Firebase。
@@ -58,7 +59,7 @@ export function deleteDiaryEntry(id: string): void {
 export function createWorkItem(input: WorkItemInput): WorkItem {
   const data = readDashboard();
   const now = new Date().toISOString();
-  const item: WorkItem = { ...input, id: createId("work"), createdAt: now, updatedAt: now };
+  const item: WorkItem = { ...input, completedAt: input.status === "已完成" ? now : input.completedAt || "", id: createId("work"), createdAt: now, updatedAt: now };
   data.workItems = [item, ...data.workItems];
   save(data);
   return item;
@@ -69,7 +70,8 @@ export function updateWorkItem(id: string, input: WorkItemInput): WorkItem {
   let updated: WorkItem | undefined;
   data.workItems = data.workItems.map((item) => {
     if (item.id !== id) return item;
-    updated = { ...item, ...input, updatedAt: new Date().toISOString() };
+    const now = new Date().toISOString();
+    updated = { ...item, ...input, completedAt: getNextCompletedAt(item, input, now), updatedAt: now };
     return updated;
   });
   if (!updated) throw new Error("没有找到要编辑的工作内容。");
@@ -81,6 +83,67 @@ export function deleteWorkItem(id: string): void {
   const data = readDashboard();
   data.workItems = data.workItems.filter((item) => item.id !== id);
   save(data);
+}
+
+export function createWorkTemplate(input: WorkTemplateInput): WorkTemplate {
+  const data = readDashboard();
+  const now = new Date().toISOString();
+  const template: WorkTemplate = {
+    ...input,
+    id: createId("worktpl"),
+    name: input.name.trim(),
+    defaultTitle: input.defaultTitle.trim(),
+    defaultContent: input.defaultContent.trim(),
+    sortOrder: Number.isFinite(Number(input.sortOrder)) ? Number(input.sortOrder) : getNextTemplateSortOrder(data.workTemplates),
+    createdAt: now,
+    updatedAt: now,
+  };
+  data.workTemplates = [...data.workTemplates, template].sort((a, b) => a.sortOrder - b.sortOrder);
+  save(data);
+  return template;
+}
+
+export function updateWorkTemplate(id: string, input: WorkTemplateInput): WorkTemplate {
+  const data = readDashboard();
+  let updated: WorkTemplate | undefined;
+  data.workTemplates = data.workTemplates
+    .map((template) => {
+      if (template.id !== id) return template;
+      updated = {
+        ...template,
+        ...input,
+        name: input.name.trim(),
+        defaultTitle: input.defaultTitle.trim(),
+        defaultContent: input.defaultContent.trim(),
+        updatedAt: new Date().toISOString(),
+      };
+      return updated;
+    })
+    .sort((a, b) => a.sortOrder - b.sortOrder);
+  if (!updated) throw new Error("没有找到要编辑的工作模板。");
+  save(data);
+  return updated;
+}
+
+export function deleteWorkTemplate(id: string): void {
+  const data = readDashboard();
+  data.workTemplates = data.workTemplates.filter((template) => template.id !== id);
+  save(data);
+}
+
+export function reorderWorkTemplates(templateIds: string[]): WorkTemplate[] {
+  const data = readDashboard();
+  const orderMap = new Map(templateIds.map((id, index) => [id, (index + 1) * 10]));
+  const now = new Date().toISOString();
+  data.workTemplates = data.workTemplates
+    .map((template) => ({
+      ...template,
+      sortOrder: orderMap.get(template.id) ?? template.sortOrder,
+      updatedAt: orderMap.has(template.id) ? now : template.updatedAt,
+    }))
+    .sort((a, b) => a.sortOrder - b.sortOrder);
+  save(data);
+  return data.workTemplates;
 }
 
 export function updateWorkResponsibilities(groups: WorkResponsibilityGroup[]): WorkResponsibilityGroup[] {
@@ -158,9 +221,12 @@ export function generateTodayRoutineWork(date = todayInputValue()): WorkItem[] {
       status: template.defaultStatus,
       content: template.description || `例行工作：${template.name}`,
       date,
+      plannedDate: date,
       projectId: template.projectId,
       linkedProjectIds: template.projectId ? [template.projectId] : [],
       sourceTemplateId: template.id,
+      sourceTemplateType: "routine",
+      sourceTemplateName: template.name,
       images: [],
       createdAt: now,
       updatedAt: now,
@@ -348,13 +414,19 @@ export function clearData(): DashboardData {
   return replaceDashboard(createEmptyDashboardData());
 }
 
-export function resetDemoData(): DashboardData {
-  return replaceDashboard(createSeedData());
-}
-
 function save(data: DashboardData): DashboardData {
   data.updatedAt = new Date().toISOString();
   return writeDashboard(data);
+}
+
+function getNextCompletedAt(previous: WorkItem, input: WorkItemInput, now: string): string {
+  if (input.status !== "已完成") return "";
+  if (previous.status === "已完成" && previous.completedAt) return previous.completedAt;
+  return input.completedAt || now;
+}
+
+function getNextTemplateSortOrder(templates: WorkTemplate[]): number {
+  return templates.reduce((max, template) => Math.max(max, template.sortOrder || 0), 0) + 10;
 }
 
 function isTemplateDueToday(template: RoutineWorkTemplate, date: string): boolean {

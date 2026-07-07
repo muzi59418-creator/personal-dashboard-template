@@ -1,17 +1,20 @@
 import { useEffect, useMemo, useState } from "react";
-import { Plus, Tags } from "lucide-react";
+import { ChevronDown, Plus, Tags } from "lucide-react";
 import type {
   Category,
   CategoryInput,
   Project,
   RoutineWorkTemplate,
   RoutineWorkTemplateInput,
+  WorkTemplate,
+  WorkTemplateDateRule,
+  WorkTemplateInput,
   WorkItem,
   WorkItemInput,
   WorkResponsibilityGroup,
 } from "../../types/dashboard";
 import { WORK_STATUSES } from "../../types/dashboard";
-import { formatDate, formatDateTime, formatWeekday } from "../../utils/date";
+import { formatDate, formatDateTime, formatWeekday, todayInputValue } from "../../utils/date";
 import { CategoryManager } from "../Categories/CategoryManager";
 import { DateInput } from "../Common/DateInput";
 import { EmptyState } from "../Common/EmptyState";
@@ -19,6 +22,7 @@ import { Modal } from "../Common/Modal";
 import { WorkItemDetailModal } from "./WorkItemDetailModal";
 import { WorkItemForm } from "./WorkItemForm";
 import { RoutineWorkPanel } from "./RoutineWorkPanel";
+import { WorkTemplateManager } from "./WorkTemplateManager";
 import { WorkResponsibilitiesPanel } from "./WorkResponsibilitiesPanel";
 import { WorkStatusSelect } from "./WorkStatusSelect";
 
@@ -28,6 +32,7 @@ interface WorkItemListProps {
   projects: Project[];
   responsibilities: WorkResponsibilityGroup[];
   routineWorkTemplates: RoutineWorkTemplate[];
+  workTemplates: WorkTemplate[];
   onCreate: (input: WorkItemInput) => void;
   onUpdate: (id: string, input: WorkItemInput) => void;
   onDelete: (id: string) => void;
@@ -36,6 +41,10 @@ interface WorkItemListProps {
   onUpdateRoutineWork: (id: string, input: RoutineWorkTemplateInput) => void;
   onDeleteRoutineWork: (id: string) => void;
   onGenerateRoutineWork: () => void;
+  onCreateWorkTemplate: (input: WorkTemplateInput) => void;
+  onUpdateWorkTemplate: (id: string, input: WorkTemplateInput) => void;
+  onDeleteWorkTemplate: (id: string) => void;
+  onReorderWorkTemplates: (templateIds: string[]) => void;
   onCreateCategory: (input: CategoryInput) => void;
   onUpdateCategory: (id: string, input: CategoryInput) => void;
   onDeleteCategory: (id: string) => void;
@@ -47,6 +56,7 @@ export function WorkItemList({
   projects,
   responsibilities,
   routineWorkTemplates,
+  workTemplates,
   onCreate,
   onUpdate,
   onDelete,
@@ -55,6 +65,10 @@ export function WorkItemList({
   onUpdateRoutineWork,
   onDeleteRoutineWork,
   onGenerateRoutineWork,
+  onCreateWorkTemplate,
+  onUpdateWorkTemplate,
+  onDeleteWorkTemplate,
+  onReorderWorkTemplates,
   onCreateCategory,
   onUpdateCategory,
   onDeleteCategory,
@@ -63,7 +77,12 @@ export function WorkItemList({
   const [statusFilter, setStatusFilter] = useState("");
   const [projectFilter, setProjectFilter] = useState("");
   const [dateFilter, setDateFilter] = useState("");
+  const [plannedDateFilter, setPlannedDateFilter] = useState("");
   const [creating, setCreating] = useState(false);
+  const [createMenuOpen, setCreateMenuOpen] = useState(false);
+  const [templatePickerOpen, setTemplatePickerOpen] = useState(false);
+  const [templateManagerOpen, setTemplateManagerOpen] = useState(false);
+  const [createInitialInput, setCreateInitialInput] = useState<Partial<WorkItemInput> | undefined>();
   const [selectedItemId, setSelectedItemId] = useState("");
   const [editingDetail, setEditingDetail] = useState(false);
   const [categoryManagerOpen, setCategoryManagerOpen] = useState(false);
@@ -82,6 +101,7 @@ export function WorkItemList({
         if (statusFilter && item.status !== statusFilter) return false;
         if (projectFilter && item.projectId !== projectFilter) return false;
         if (dateFilter && item.date !== dateFilter) return false;
+        if (plannedDateFilter && item.plannedDate !== plannedDateFilter) return false;
         return true;
       })
       .sort(compareWorkItems);
@@ -93,13 +113,36 @@ export function WorkItemList({
     });
 
     return Array.from(groups, ([date, groupItems]) => ({ date, items: groupItems }));
-  }, [categoryFilter, dateFilter, items, projectFilter, statusFilter]);
+  }, [categoryFilter, dateFilter, items, plannedDateFilter, projectFilter, statusFilter]);
 
   function clearFilters() {
     setCategoryFilter("");
     setStatusFilter("");
     setProjectFilter("");
     setDateFilter("");
+    setPlannedDateFilter("");
+  }
+
+  function openBlankCreate() {
+    setCreateInitialInput(undefined);
+    setCreating(true);
+    setCreateMenuOpen(false);
+  }
+
+  function openTemplatePicker() {
+    setTemplatePickerOpen(true);
+    setCreateMenuOpen(false);
+  }
+
+  function openTemplateManager() {
+    setTemplateManagerOpen(true);
+    setCreateMenuOpen(false);
+  }
+
+  function startCreateFromTemplate(template: WorkTemplate) {
+    setCreateInitialInput(buildWorkInputFromTemplate(template, categories[0]?.id || ""));
+    setTemplatePickerOpen(false);
+    setCreating(true);
   }
 
   return (
@@ -144,7 +187,13 @@ export function WorkItemList({
             </option>
           ))}
         </select>
-        <DateInput className="filter-control" value={dateFilter} onChange={(event) => setDateFilter(event.target.value)} aria-label="日期筛选" />
+        <DateInput className="filter-control" value={dateFilter} onChange={(event) => setDateFilter(event.target.value)} aria-label="截止日期筛选" />
+        <DateInput
+          className="filter-control"
+          value={plannedDateFilter}
+          onChange={(event) => setPlannedDateFilter(event.target.value)}
+          aria-label="计划执行日筛选"
+        />
         <button className="secondary-button" type="button" onClick={clearFilters}>
           查看全部
         </button>
@@ -152,10 +201,26 @@ export function WorkItemList({
           <Tags size={16} />
           分类管理
         </button>
-        <button className="primary-button" type="button" onClick={() => setCreating(true)}>
-          <Plus size={16} />
-          新增工作
-        </button>
+        <div className="add-work-menu">
+          <button className="primary-button" type="button" onClick={() => setCreateMenuOpen((current) => !current)}>
+            <Plus size={16} />
+            新增工作
+            <ChevronDown size={15} />
+          </button>
+          {createMenuOpen && (
+            <div className="dropdown-menu add-work-dropdown">
+              <button type="button" onClick={openBlankCreate}>
+                空白新增工作
+              </button>
+              <button type="button" onClick={openTemplatePicker}>
+                从模板创建
+              </button>
+              <button type="button" onClick={openTemplateManager}>
+                管理模板
+              </button>
+            </div>
+          )}
+        </div>
       </div>
       {groupedItems.length === 0 ? (
         <EmptyState title="暂无工作内容" description="新增一条待处理事项，或调整筛选条件。" />
@@ -204,6 +269,8 @@ export function WorkItemList({
                               </span>
                             )}
                             {item.projectId && <span className="chip outline">{projectMap.get(item.projectId) || "关联项目"}</span>}
+                            {item.plannedDate && <span className="chip outline">计划 {formatDate(item.plannedDate)}</span>}
+                            {item.sourceTemplateType === "work" && <span className="chip outline">模板：{item.sourceTemplateName || "已删除模板"}</span>}
                             {(item.images?.length || 0) > 0 && <span className="chip outline">{item.images?.length || 0} 张图片</span>}
                             <span className="chip outline">更新 {formatDateTime(item.updatedAt || item.createdAt)}</span>
                           </div>
@@ -219,15 +286,54 @@ export function WorkItemList({
       )}
 
       {creating && (
-        <Modal title="新增工作内容" onClose={() => setCreating(false)}>
+        <Modal
+          title={createInitialInput?.sourceTemplateName ? `从模板创建：${createInitialInput.sourceTemplateName}` : "新增工作内容"}
+          onClose={() => setCreating(false)}
+        >
           <WorkItemForm
             categories={categories}
             projects={projects}
+            initialInput={createInitialInput}
             onCancel={() => setCreating(false)}
             onSubmit={(input) => {
               onCreate(input);
               setCreating(false);
+              setCreateInitialInput(undefined);
             }}
+          />
+        </Modal>
+      )}
+
+      {templatePickerOpen && (
+        <Modal title="选择工作模板" onClose={() => setTemplatePickerOpen(false)}>
+          <div className="template-picker-list">
+            {workTemplates.filter((template) => template.enabled).length === 0 ? (
+              <EmptyState title="暂无可用模板" description="可以先进入模板管理新增或启用模板。" />
+            ) : (
+              [...workTemplates]
+                .filter((template) => template.enabled)
+                .sort((a, b) => a.sortOrder - b.sortOrder)
+                .map((template) => (
+                  <button className="template-picker-row" type="button" key={template.id} onClick={() => startCreateFromTemplate(template)}>
+                    <strong>{template.name}</strong>
+                    <span>{template.defaultTitle || "未设置默认标题"}</span>
+                  </button>
+                ))
+            )}
+          </div>
+        </Modal>
+      )}
+
+      {templateManagerOpen && (
+        <Modal title="管理工作模板" onClose={() => setTemplateManagerOpen(false)}>
+          <WorkTemplateManager
+            templates={workTemplates}
+            categories={categories}
+            projects={projects}
+            onCreate={onCreateWorkTemplate}
+            onUpdate={onUpdateWorkTemplate}
+            onDelete={onDeleteWorkTemplate}
+            onReorder={onReorderWorkTemplates}
           />
         </Modal>
       )}
@@ -286,4 +392,47 @@ function compareWorkItems(a: WorkItem, b: WorkItem): number {
 
 function getCreatedTime(item: WorkItem): string {
   return item.createdAt || "";
+}
+
+function buildWorkInputFromTemplate(template: WorkTemplate, fallbackCategoryId: string): Partial<WorkItemInput> {
+  const dueDate = resolveTemplateDate(template.dueDateRule) || todayInputValue();
+  return {
+    title: template.defaultTitle,
+    categoryId: template.defaultCategoryId || fallbackCategoryId,
+    status: template.defaultStatus,
+    content: template.defaultContent,
+    date: dueDate,
+    plannedDate: resolveTemplateDate(template.plannedDateRule),
+    projectId: template.defaultProjectId,
+    linkedProjectIds: template.defaultProjectId ? [template.defaultProjectId] : [],
+    sourceTemplateId: template.id,
+    sourceTemplateType: "work",
+    sourceTemplateName: template.name,
+    images: [],
+  };
+}
+
+function resolveTemplateDate(rule: WorkTemplateDateRule): string {
+  if (!rule) return "";
+  const today = new Date(`${todayInputValue()}T00:00:00`);
+  if (rule === "today") return formatInputDate(today);
+  if (rule === "tomorrow") {
+    today.setDate(today.getDate() + 1);
+    return formatInputDate(today);
+  }
+  if (rule === "next_week") {
+    today.setDate(today.getDate() + 7);
+    return formatInputDate(today);
+  }
+  if (rule === "next_workday") {
+    do {
+      today.setDate(today.getDate() + 1);
+    } while (today.getDay() === 0 || today.getDay() === 6);
+    return formatInputDate(today);
+  }
+  return "";
+}
+
+function formatInputDate(date: Date): string {
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
 }

@@ -7,20 +7,22 @@ import { DateInput } from "../Common/DateInput";
 
 interface WorkItemFormProps {
   item?: WorkItem;
+  initialInput?: Partial<WorkItemInput>;
   categories: Category[];
   projects: Project[];
   onCancel: () => void;
   onSubmit: (input: WorkItemInput) => void;
 }
 
-export function WorkItemForm({ item, categories, projects, onCancel, onSubmit }: WorkItemFormProps) {
-  const [title, setTitle] = useState(item?.title || "");
-  const [categoryId, setCategoryId] = useState(item?.categoryId || categories[0]?.id || "");
-  const [status, setStatus] = useState<WorkStatus>(item?.status || "待处理");
-  const [content, setContent] = useState(item?.content || "");
-  const [date, setDate] = useState(item?.date || todayInputValue());
-  const [projectId, setProjectId] = useState(item?.projectId || "");
-  const [images, setImages] = useState<string[]>(item?.images || []);
+export function WorkItemForm({ item, initialInput, categories, projects, onCancel, onSubmit }: WorkItemFormProps) {
+  const [title, setTitle] = useState(item?.title || initialInput?.title || "");
+  const [categoryId, setCategoryId] = useState(item?.categoryId || initialInput?.categoryId || categories[0]?.id || "");
+  const [status, setStatus] = useState<WorkStatus>(item?.status || initialInput?.status || "待处理");
+  const [content, setContent] = useState(item?.content || initialInput?.content || "");
+  const [date, setDate] = useState(item?.date || initialInput?.date || todayInputValue());
+  const [plannedDate, setPlannedDate] = useState(item?.plannedDate || initialInput?.plannedDate || "");
+  const [projectId, setProjectId] = useState(item?.projectId || initialInput?.projectId || "");
+  const [images, setImages] = useState<string[]>(item?.images || initialInput?.images || []);
   const [error, setError] = useState("");
 
   function submit(event: React.FormEvent) {
@@ -30,7 +32,20 @@ export function WorkItemForm({ item, categories, projects, onCancel, onSubmit }:
       setError("标题、分类、正文和日期都是必填项。");
       return;
     }
-    onSubmit({ title: title.trim(), categoryId, status, content: content.trim(), date, projectId, sourceTemplateId: item?.sourceTemplateId, images });
+    onSubmit({
+      title: title.trim(),
+      categoryId,
+      status,
+      content: content.trim(),
+      date,
+      plannedDate,
+      projectId,
+      sourceTemplateId: item?.sourceTemplateId || initialInput?.sourceTemplateId,
+      sourceTemplateType: item?.sourceTemplateType || initialInput?.sourceTemplateType,
+      sourceTemplateName: item?.sourceTemplateName || initialInput?.sourceTemplateName,
+      completedAt: item?.completedAt || initialInput?.completedAt,
+      images,
+    });
   }
 
   return (
@@ -68,9 +83,17 @@ export function WorkItemForm({ item, categories, projects, onCancel, onSubmit }:
       </label>
       <div className="form-grid">
         <label>
-          日期
+          截止日期
           <DateInput value={date} onChange={(event) => setDate(event.target.value)} required />
+          <span className="field-hint">最晚必须完成的日期。</span>
         </label>
+        <label>
+          计划执行日
+          <DateInput value={plannedDate} onChange={(event) => setPlannedDate(event.target.value)} />
+          <span className="field-hint">准备在哪天做，可留空。</span>
+        </label>
+      </div>
+      <div className="form-grid">
         <label>
           关联项目
           <select value={projectId} onChange={(event) => setProjectId(event.target.value)}>

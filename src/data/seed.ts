@@ -1,4 +1,5 @@
 import type { Category, DashboardData, DiaryEntry, Idea, Project, RoutineWorkTemplate, WorkItem } from "../types/dashboard";
+import { APP_VERSION, SCHEMA_VERSION } from "./appVersion";
 
 const now = "2025-01-06T09:00:00.000Z";
 
@@ -196,9 +197,11 @@ const workItems: WorkItem[] = [
     status: "已完成",
     content: "把本周重点事项拆分为可执行任务，并标记优先级。",
     date: "2025-01-06",
+    plannedDate: "",
     projectId: "project_personal_kb",
     linkedProjectIds: ["project_personal_kb"],
     images: [],
+    completedAt: now,
     createdAt: now,
     updatedAt: now,
   },
@@ -209,6 +212,7 @@ const workItems: WorkItem[] = [
     status: "进行中",
     content: "整理阶段成果、待解决问题和下一步行动。",
     date: "2025-01-06",
+    plannedDate: "",
     projectId: "project_content_plan",
     linkedProjectIds: ["project_content_plan"],
     images: [],
@@ -222,6 +226,7 @@ const workItems: WorkItem[] = [
     status: "待处理",
     content: "检查分类是否清晰，并合并重复主题。",
     date: "2025-01-07",
+    plannedDate: "",
     projectId: "project_personal_kb",
     linkedProjectIds: ["project_personal_kb"],
     images: [],
@@ -235,6 +240,7 @@ const workItems: WorkItem[] = [
     status: "进行中",
     content: "练习组件状态、表单输入和列表渲染。",
     date: "2025-01-07",
+    plannedDate: "",
     projectId: "project_learning_plan",
     linkedProjectIds: ["project_learning_plan"],
     images: [],
@@ -248,6 +254,7 @@ const workItems: WorkItem[] = [
     status: "待处理",
     content: "从项目列表中选择下周最重要的三件事。",
     date: "2025-01-08",
+    plannedDate: "",
     projectId: "",
     linkedProjectIds: [],
     images: [],
@@ -379,7 +386,9 @@ const ideas: Idea[] = [
 
 export function createSeedData(): DashboardData {
   return {
-    version: "1.0.0-template",
+    version: APP_VERSION,
+    appVersion: APP_VERSION,
+    schemaVersion: SCHEMA_VERSION,
     updatedAt: now,
     migrations: [],
     diaryEntries: structuredClone(diaryEntries),
@@ -389,5 +398,6 @@ export function createSeedData(): DashboardData {
     projects: structuredClone(projects),
     workResponsibilities: [],
     routineWorkTemplates: structuredClone(routineWorkTemplates),
+    workTemplates: [],
   };
 }

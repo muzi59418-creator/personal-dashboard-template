@@ -7,6 +7,8 @@ export type ProjectQuadrant = "important_urgent" | "important_not_urgent" | "urg
 export type ProjectStepStatus = "todo" | "doing" | "done";
 export type ConvertedToType = "work" | "diary";
 export type RoutineWorkFrequency = "daily" | "workday" | "weekly" | "monthly" | "custom";
+export type WorkTemplateDateRule = "" | "today" | "tomorrow" | "next_workday" | "next_week";
+export type WorkSourceTemplateType = "routine" | "work";
 
 export interface ProjectStep {
   id: string;
@@ -36,10 +38,14 @@ export interface WorkItem {
   status: WorkStatus;
   content: string;
   date: string;
+  plannedDate?: string;
   projectId: string;
   linkedProjectIds?: string[];
   sourceTemplateId?: string;
+  sourceTemplateType?: WorkSourceTemplateType;
+  sourceTemplateName?: string;
   images?: string[];
+  completedAt?: string;
   createdAt: string;
   updatedAt: string;
 }
@@ -93,6 +99,22 @@ export interface RoutineWorkTemplate {
   updatedAt: string;
 }
 
+export interface WorkTemplate {
+  id: string;
+  name: string;
+  defaultTitle: string;
+  defaultCategoryId: string;
+  defaultStatus: WorkStatus;
+  defaultProjectId: string;
+  defaultContent: string;
+  plannedDateRule: WorkTemplateDateRule;
+  dueDateRule: WorkTemplateDateRule;
+  enabled: boolean;
+  sortOrder: number;
+  createdAt: string;
+  updatedAt: string;
+}
+
 export interface Project {
   id: string;
   name: string;
@@ -122,6 +144,8 @@ export interface Project {
 
 export interface DashboardData {
   version: string;
+  appVersion: string;
+  schemaVersion: string;
   updatedAt: string;
   migrations: string[];
   diaryEntries: DiaryEntry[];
@@ -131,6 +155,7 @@ export interface DashboardData {
   projects: Project[];
   workResponsibilities: WorkResponsibilityGroup[];
   routineWorkTemplates: RoutineWorkTemplate[];
+  workTemplates: WorkTemplate[];
 }
 
 export type DiaryEntryInput = Omit<DiaryEntry, "id" | "createdAt" | "updatedAt">;
@@ -140,6 +165,7 @@ export type CategoryInput = Omit<Category, "id" | "createdAt" | "updatedAt">;
 export type ProjectInput = Omit<Project, "id" | "createdAt" | "updatedAt">;
 export type WorkResponsibilityGroupInput = WorkResponsibilityGroup;
 export type RoutineWorkTemplateInput = Omit<RoutineWorkTemplate, "id" | "createdAt" | "updatedAt">;
+export type WorkTemplateInput = Omit<WorkTemplate, "id" | "createdAt" | "updatedAt">;
 
 export const WORK_STATUSES: WorkStatus[] = ["待处理", "进行中", "已完成", "暂停"];
 export const IDEA_STATUSES: IdeaStatus[] = ["unorganized", "organized", "archived", "converted"];
@@ -152,3 +178,4 @@ export const PROJECT_QUADRANTS: ProjectQuadrant[] = [
 ];
 export const PROJECT_STEP_STATUSES: ProjectStepStatus[] = ["todo", "doing", "done"];
 export const ROUTINE_WORK_FREQUENCIES: RoutineWorkFrequency[] = ["daily", "workday", "weekly", "monthly", "custom"];
+export const WORK_TEMPLATE_DATE_RULES: WorkTemplateDateRule[] = ["", "today", "tomorrow", "next_workday", "next_week"];

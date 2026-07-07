@@ -61,8 +61,10 @@ export function WorkItemDetailModal({
           <div className="detail-meta-grid">
             <DetailMeta label="分类" value={category?.name || "未分类"} />
             <DetailMeta label="状态" value={item.status} />
-            <DetailMeta label="日期" value={formatDate(item.date)} />
+            <DetailMeta label="截止日期" value={formatDate(item.date)} />
+            <DetailMeta label="计划执行日" value={item.plannedDate ? formatDate(item.plannedDate) : "未设置"} />
             <DetailMeta label="关联项目" value={project?.name || "不关联"} />
+            {item.sourceTemplateType === "work" && <DetailMeta label="来源模板" value={item.sourceTemplateName || "已删除模板"} />}
             <DetailMeta label="创建时间" value={formatDateTime(item.createdAt)} />
             <DetailMeta label="更新时间" value={formatDateTime(item.updatedAt)} />
           </div>

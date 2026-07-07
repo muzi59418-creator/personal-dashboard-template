@@ -1,7 +1,7 @@
 import type { DashboardData } from "../types/dashboard";
 
 const REQUIRED_COLLECTION_KEYS = ["diaryEntries", "workItems", "ideas", "categories", "projects"] as const;
-const OPTIONAL_COLLECTION_KEYS = ["migrations", "workResponsibilities", "routineWorkTemplates"] as const;
+const OPTIONAL_COLLECTION_KEYS = ["migrations", "workResponsibilities", "routineWorkTemplates", "workTemplates"] as const;
 
 export type BackupValidationResult =
   | { ok: true; data: DashboardData }
@@ -64,7 +64,7 @@ export function validateDashboardBackupData(value: unknown): BackupValidationRes
 
   const workResponsibilities = value.workResponsibilities;
   if (Array.isArray(workResponsibilities) && !workResponsibilities.every(isRecord)) {
-    return { ok: false, message: "导入失败：长期职责数据格式不正确，当前数据未被修改。" };
+    return { ok: false, message: "导入失败：工作职责数据格式不正确，当前数据未被修改。" };
   }
 
   const routineWorkTemplates = value.routineWorkTemplates;
@@ -72,8 +72,21 @@ export function validateDashboardBackupData(value: unknown): BackupValidationRes
     return { ok: false, message: "导入失败：例行工作数据格式不正确，当前数据未被修改。" };
   }
 
+  const workTemplates = value.workTemplates;
+  if (Array.isArray(workTemplates) && !workTemplates.every(isRecord)) {
+    return { ok: false, message: "导入失败：工作模板数据格式不正确，当前数据未被修改。" };
+  }
+
   if (value.version !== undefined && typeof value.version !== "string") {
     return { ok: false, message: "导入失败：备份版本字段格式不正确，当前数据未被修改。" };
+  }
+
+  if (value.appVersion !== undefined && typeof value.appVersion !== "string") {
+    return { ok: false, message: "导入失败：应用版本字段格式不正确，当前数据未被修改。" };
+  }
+
+  if (value.schemaVersion !== undefined && typeof value.schemaVersion !== "string") {
+    return { ok: false, message: "导入失败：数据结构版本字段格式不正确，当前数据未被修改。" };
   }
 
   if (value.updatedAt !== undefined && typeof value.updatedAt !== "string") {

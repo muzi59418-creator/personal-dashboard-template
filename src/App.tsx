@@ -8,6 +8,7 @@ import type {
   IdeaInput,
   ProjectInput,
   RoutineWorkTemplateInput,
+  WorkTemplateInput,
   WorkResponsibilityGroupInput,
   WorkItemInput,
 } from "./types/dashboard";
@@ -20,24 +21,27 @@ import {
   createIdea,
   createProject,
   createRoutineWorkTemplate,
+  createWorkTemplate,
   createWorkItem,
   deleteCategory,
   deleteDiaryEntry,
   deleteIdea,
   deleteProject,
   deleteRoutineWorkTemplate,
+  deleteWorkTemplate,
   deleteWorkItem,
   exportData,
   generateTodayRoutineWork,
   getDashboardData,
   importData,
-  resetDemoData,
   reorderProjects,
+  reorderWorkTemplates,
   updateCategory,
   updateDiaryEntry,
   updateIdea,
   updateProject,
   updateRoutineWorkTemplate,
+  updateWorkTemplate,
   updateWorkResponsibilities,
   updateWorkItem,
 } from "./data/repository";
@@ -80,6 +84,10 @@ function App() {
       createRoutineWorkAction: (input: RoutineWorkTemplateInput) => runAction(() => createRoutineWorkTemplate(input), "例行工作已保存"),
       updateRoutineWorkAction: (id: string, input: RoutineWorkTemplateInput) => runAction(() => updateRoutineWorkTemplate(id, input), "例行工作已更新"),
       deleteRoutineWorkAction: (id: string) => runAction(() => deleteRoutineWorkTemplate(id), "例行工作已删除"),
+      createWorkTemplateAction: (input: WorkTemplateInput) => runAction(() => createWorkTemplate(input), "工作模板已保存"),
+      updateWorkTemplateAction: (id: string, input: WorkTemplateInput) => runAction(() => updateWorkTemplate(id, input), "工作模板已更新"),
+      deleteWorkTemplateAction: (id: string) => runAction(() => deleteWorkTemplate(id), "工作模板已删除"),
+      reorderWorkTemplateAction: (templateIds: string[]) => runAction(() => reorderWorkTemplates(templateIds), "模板顺序已保存"),
       generateRoutineWorkAction: () => {
         const created = runAction(() => generateTodayRoutineWork(), "今日例行工作已生成");
         if (created?.length === 0) {
@@ -99,10 +107,9 @@ function App() {
       createCategoryAction: (input: CategoryInput) => runAction(() => createCategory(input), "分类已保存"),
       updateCategoryAction: (id: string, input: CategoryInput) => runAction(() => updateCategory(id, input), "分类已更新"),
       deleteCategoryAction: (id: string) => runAction(() => deleteCategory(id), "分类已删除"),
-      updateWorkResponsibilitiesAction: (groups: WorkResponsibilityGroupInput[]) => runAction(() => updateWorkResponsibilities(groups), "长期职责已保存"),
+      updateWorkResponsibilitiesAction: (groups: WorkResponsibilityGroupInput[]) => runAction(() => updateWorkResponsibilities(groups), "工作职责已保存"),
       importDashboard: (payload: string | DashboardData) => runAction(() => importData(payload), "数据已导入"),
       clearDashboard: () => runAction(() => clearData(), "本地数据已清空"),
-      resetDemoDashboard: () => runAction(() => resetDemoData(), "演示数据已恢复"),
     }),
     [],
   );
@@ -171,6 +178,7 @@ function App() {
               projects={data.projects}
               responsibilities={data.workResponsibilities}
               routineWorkTemplates={data.routineWorkTemplates}
+              workTemplates={data.workTemplates}
               onCreate={actions.createWork}
               onUpdate={actions.updateWork}
               onDelete={actions.deleteWork}
@@ -179,6 +187,10 @@ function App() {
               onUpdateRoutineWork={actions.updateRoutineWorkAction}
               onDeleteRoutineWork={actions.deleteRoutineWorkAction}
               onGenerateRoutineWork={actions.generateRoutineWorkAction}
+              onCreateWorkTemplate={actions.createWorkTemplateAction}
+              onUpdateWorkTemplate={actions.updateWorkTemplateAction}
+              onDeleteWorkTemplate={actions.deleteWorkTemplateAction}
+              onReorderWorkTemplates={actions.reorderWorkTemplateAction}
               onCreateCategory={actions.createCategoryAction}
               onUpdateCategory={actions.updateCategoryAction}
               onDeleteCategory={actions.deleteCategoryAction}
@@ -232,7 +244,6 @@ function App() {
               onExport={exportData}
               onImport={actions.importDashboard}
               onClear={actions.clearDashboard}
-              onResetDemo={actions.resetDemoDashboard}
             />
           )}
         </main>
@@ -255,6 +266,10 @@ function useDashboardActionsShape() {
     createRoutineWorkAction: (_input: RoutineWorkTemplateInput) => undefined as unknown,
     updateRoutineWorkAction: (_id: string, _input: RoutineWorkTemplateInput) => undefined as unknown,
     deleteRoutineWorkAction: (_id: string) => undefined as unknown,
+    createWorkTemplateAction: (_input: WorkTemplateInput) => undefined as unknown,
+    updateWorkTemplateAction: (_id: string, _input: WorkTemplateInput) => undefined as unknown,
+    deleteWorkTemplateAction: (_id: string) => undefined as unknown,
+    reorderWorkTemplateAction: (_templateIds: string[]) => undefined as unknown,
     generateRoutineWorkAction: () => undefined as unknown,
     createIdeaAction: (_input: IdeaInput) => undefined as unknown,
     updateIdeaAction: (_id: string, _input: IdeaInput) => undefined as unknown,
@@ -302,10 +317,15 @@ function DashboardHome({ data, actions, onNavigate }: DashboardHomeProps) {
         <WorkPreview
           categories={data.categories}
           items={data.workItems}
+          projects={data.projects}
           onUpdateWork={actions.updateWork}
           onOpenWork={(workId) => {
             const selected = data.workItems.find((item) => item.id === workId);
             setRecordDetail({ id: workId, kind: "work", title: selected?.title || "", status: selected?.status || "" });
+          }}
+          onOpenProject={(projectId) => {
+            const selected = data.projects.find((item) => item.id === projectId);
+            setRecordDetail({ id: projectId, kind: "project", title: selected?.name || "", status: selected?.status || "" });
           }}
         />
         <DiaryPreview entries={data.diaryEntries} projects={data.projects} onViewAll={() => onNavigate("diary")} />

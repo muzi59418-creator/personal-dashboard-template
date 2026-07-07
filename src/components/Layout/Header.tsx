@@ -11,7 +11,7 @@ export function Header({ onMenuToggle }: HeaderProps) {
         <button className="icon-button mobile-menu-button" type="button" aria-label="打开菜单" title="打开菜单" onClick={onMenuToggle}>
           <Menu size={19} />
         </button>
-        <h1>私人工作仪表板</h1>
+        <h1>个人工作仪表板</h1>
       </div>
     </header>
   );

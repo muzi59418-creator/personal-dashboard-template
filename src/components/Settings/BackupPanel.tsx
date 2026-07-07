@@ -10,17 +10,16 @@ interface BackupPanelProps {
   onExport: () => string;
   onImport: (payload: string | DashboardData) => DashboardData | undefined;
   onClear: () => void;
-  onResetDemo: () => void;
 }
 
-export function BackupPanel({ data, onExport, onImport, onClear, onResetDemo }: BackupPanelProps) {
+export function BackupPanel({ data, onExport, onImport, onClear }: BackupPanelProps) {
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const [message, setMessage] = useState("");
   const [messageTone, setMessageTone] = useState<"success" | "error">("success");
   const dataStatus = getLocalDataStatus(data);
 
   function exportJson() {
-    const fileName = createBackupFileName("个人工作仪表板模板备份");
+    const fileName = createBackupFileName("个人工作仪表板备份");
     if (!downloadJsonFile(onExport(), fileName)) {
       showMessage("导出失败：浏览器未能创建备份文件，请稍后重试。", "error");
       return;
@@ -46,7 +45,7 @@ export function BackupPanel({ data, onExport, onImport, onClear, onResetDemo }: 
         return;
       }
 
-      const backupFileName = createBackupFileName("导入前自动备份_个人工作仪表板模板");
+      const backupFileName = createBackupFileName("导入前自动备份_个人工作仪表板");
       if (!downloadJsonFile(onExport(), backupFileName)) {
         showMessage("导入前自动备份下载失败，当前数据未被修改。", "error");
         return;
@@ -65,6 +64,11 @@ export function BackupPanel({ data, onExport, onImport, onClear, onResetDemo }: 
     event.target.value = "";
   }
 
+  function refreshStorage() {
+    const refreshed = onImport(onExport());
+    showMessage(refreshed ? "已重新写入当前数据。" : "刷新存储失败，当前数据未被修改。", refreshed ? "success" : "error");
+  }
+
   function showMessage(nextMessage: string, tone: "success" | "error") {
     setMessage(nextMessage);
     setMessageTone(tone);
@@ -81,12 +85,15 @@ export function BackupPanel({ data, onExport, onImport, onClear, onResetDemo }: 
         <article className="settings-card">
           <h3>当前存储模式</h3>
           <p>localStorage 本地原型</p>
-          <span>数据只保存在当前浏览器本地。最近更新：{new Date(data.updatedAt).toLocaleString("zh-CN")}</span>
+          <span>
+            应用版本：v{data.appVersion || data.version}。数据只保存在当前浏览器本地。最近更新：
+            {new Date(data.updatedAt).toLocaleString("zh-CN")}
+          </span>
         </article>
         <article className="settings-card">
           <h3>后续计划</h3>
-          <p>云端数据库、自动保存、多设备同步、访问权限</p>
-          <span>当前版本不接入云端服务，也不写入账号、密码或访问凭证。</span>
+          <p>云端数据库、自动保存、多设备同步、访问控制</p>
+          <span>当前版本不接入真实云端服务，也不写入账号、密码、API Key 或 token。</span>
         </article>
       </section>
       <section className="panel local-data-status-card">
@@ -100,7 +107,7 @@ export function BackupPanel({ data, onExport, onImport, onClear, onResetDemo }: 
           <DataStatusItem label="工作日记" value={`${dataStatus.diaryEntryCount} 篇`} />
           <DataStatusItem label="临时想法 / 图文记录" value={`${dataStatus.ideaCount} 条`} />
           <DataStatusItem label="项目" value={`${dataStatus.projectCount} 个`} />
-          <DataStatusItem label="长期职责" value={`${dataStatus.workResponsibilityCount} 类`} />
+          <DataStatusItem label="工作职责" value={`${dataStatus.workResponsibilityCount} 类`} />
         </div>
         <div className={`backup-advice ${dataStatus.risk.level}`}>
           <strong>状态：{dataStatus.risk.label}</strong>
@@ -120,18 +127,9 @@ export function BackupPanel({ data, onExport, onImport, onClear, onResetDemo }: 
             <Upload size={16} />
             导入 JSON
           </button>
-          <button
-            className="secondary-button"
-            type="button"
-            onClick={() => {
-              if (window.confirm("确认恢复演示数据？当前本地数据会被示例内容覆盖。")) {
-                onResetDemo();
-                showMessage("已恢复演示数据。", "success");
-              }
-            }}
-          >
+          <button className="secondary-button" type="button" onClick={refreshStorage}>
             <RotateCcw size={16} />
-            恢复演示数据
+            刷新存储
           </button>
           <button
             className="danger-button"

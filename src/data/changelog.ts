@@ -11,6 +11,15 @@ export interface ChangelogEntry {
 
 export const changelogEntries: ChangelogEntry[] = [
   {
+    date: "2026-07-07",
+    title: "v1.1.0 今日工作台、计划执行日、工作模板",
+    type: "新增",
+    modules: ["首页", "工作内容", "工作模板", "JSON 导入导出"],
+    summary:
+      "首页今日工作升级为今日工作台，新增优先处理、今日例行、项目推进和今日已完成；工作内容新增计划执行日；新增工作模板入口和管理能力，并在导出数据中写入 appVersion 与 schemaVersion。",
+    status: "待提交",
+  },
+  {
     date: "2026-07-01",
     title: "例行工作频率规则增强",
     type: "功能优化",
@@ -83,4 +92,3 @@ export const changelogEntries: ChangelogEntry[] = [
     status: "已推送",
   },
 ];
-

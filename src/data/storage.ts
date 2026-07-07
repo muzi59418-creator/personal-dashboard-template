@@ -1,4 +1,4 @@
-import { createSeedData } from "./seed";
+﻿import { createSeedData } from "./seed";
 import type {
   DashboardData,
   DiaryEntry,
@@ -10,17 +10,22 @@ import type {
   ProjectStepStatus,
   RoutineWorkFrequency,
   RoutineWorkTemplate,
+  WorkTemplate,
+  WorkTemplateDateRule,
   WorkResponsibilityGroup,
   WorkItem,
   WorkStatus,
 } from "../types/dashboard";
+import { APP_VERSION, SCHEMA_VERSION } from "./appVersion";
 import { applyWorkResponsibilitiesV1Migration } from "./workResponsibilitiesMigration";
 
 export const STORAGE_KEY = "personal-dashboard-template:v1";
 
 export function createEmptyDashboardData(): DashboardData {
   return {
-    version: "1.0.0-template",
+    version: APP_VERSION,
+    appVersion: APP_VERSION,
+    schemaVersion: SCHEMA_VERSION,
     updatedAt: new Date().toISOString(),
     migrations: [],
     diaryEntries: [],
@@ -30,6 +35,7 @@ export function createEmptyDashboardData(): DashboardData {
     projects: [],
     workResponsibilities: [],
     routineWorkTemplates: [],
+    workTemplates: [],
   };
 }
 
@@ -68,7 +74,9 @@ export function replaceDashboard(data: DashboardData): DashboardData {
 
 function normalizeDashboardData(value: Partial<DashboardData>): DashboardData {
   return {
-    version: value.version || "1.0.0-template",
+    version: APP_VERSION,
+    appVersion: APP_VERSION,
+    schemaVersion: SCHEMA_VERSION,
     updatedAt: value.updatedAt || new Date().toISOString(),
     migrations: Array.isArray(value.migrations) ? value.migrations.map(String) : [],
     diaryEntries: Array.isArray(value.diaryEntries) ? value.diaryEntries.map(normalizeDiaryEntry) : [],
@@ -80,18 +88,29 @@ function normalizeDashboardData(value: Partial<DashboardData>): DashboardData {
       ? value.workResponsibilities.map(normalizeWorkResponsibilityGroup).sort((a, b) => a.sortOrder - b.sortOrder)
       : [],
     routineWorkTemplates: Array.isArray(value.routineWorkTemplates) ? value.routineWorkTemplates.map(normalizeRoutineWorkTemplate) : [],
+    workTemplates: Array.isArray(value.workTemplates)
+      ? value.workTemplates.map(normalizeWorkTemplate).sort((a, b) => a.sortOrder - b.sortOrder)
+      : [],
   };
 }
 
 function migrateDashboardData(data: DashboardData): DashboardData {
-  return applyWorkResponsibilitiesV1Migration(data).data;
+  const migrated = applyWorkResponsibilitiesV1Migration(data).data;
+  const migrationName = "v1.1.0-workbench-planned-date-templates";
+  if (!migrated.migrations.includes(migrationName)) {
+    migrated.migrations = [...migrated.migrations, migrationName];
+  }
+  migrated.version = APP_VERSION;
+  migrated.appVersion = APP_VERSION;
+  migrated.schemaVersion = SCHEMA_VERSION;
+  return migrated;
 }
 
 function normalizeDiaryEntry(entry: Partial<DiaryEntry>): DiaryEntry {
   return {
     id: String(entry.id || crypto.randomUUID()),
     date: entry.date || new Date().toISOString().slice(0, 10),
-    title: entry.title || "未命名日记",
+    title: entry.title || "未命名工作日记",
     content: entry.content || "",
     tags: Array.isArray(entry.tags) ? entry.tags : [],
     linkedProjectIds: Array.isArray(entry.linkedProjectIds) ? entry.linkedProjectIds : [],
@@ -104,15 +123,19 @@ function normalizeDiaryEntry(entry: Partial<DiaryEntry>): DiaryEntry {
 function normalizeWorkItem(item: Partial<WorkItem>): WorkItem {
   return {
     id: String(item.id || crypto.randomUUID()),
-    title: item.title || "未命名事项",
+    title: item.title || "未命名工作内容",
     categoryId: item.categoryId || "",
     status: normalizeWorkStatus(item.status),
     content: item.content || "",
     date: item.date || new Date().toISOString().slice(0, 10),
+    plannedDate: normalizeIsoDate(item.plannedDate),
     projectId: item.projectId || "",
     linkedProjectIds: Array.isArray(item.linkedProjectIds) ? item.linkedProjectIds : item.projectId ? [item.projectId] : [],
     sourceTemplateId: item.sourceTemplateId || undefined,
+    sourceTemplateType: normalizeWorkSourceTemplateType(item.sourceTemplateType, item.sourceTemplateId),
+    sourceTemplateName: item.sourceTemplateName || "",
     images: compactImages(item.images),
+    completedAt: typeof item.completedAt === "string" ? item.completedAt : "",
     createdAt: item.createdAt || new Date().toISOString(),
     updatedAt: item.updatedAt || item.createdAt || new Date().toISOString(),
   };
@@ -121,7 +144,7 @@ function normalizeWorkItem(item: Partial<WorkItem>): WorkItem {
 function normalizeRoutineWorkTemplate(template: Partial<RoutineWorkTemplate>): RoutineWorkTemplate {
   return {
     id: String(template.id || crypto.randomUUID()),
-    name: template.name || "未命名例行事项",
+    name: template.name || "未命名例行工作",
     description: template.description || "",
     categoryId: template.categoryId || "",
     projectId: template.projectId || "",
@@ -131,6 +154,24 @@ function normalizeRoutineWorkTemplate(template: Partial<RoutineWorkTemplate>): R
     customDate: normalizeIsoDate(template.customDate),
     defaultStatus: normalizeWorkStatus(template.defaultStatus),
     enabled: template.enabled !== false,
+    createdAt: template.createdAt || new Date().toISOString(),
+    updatedAt: template.updatedAt || template.createdAt || new Date().toISOString(),
+  };
+}
+
+function normalizeWorkTemplate(template: Partial<WorkTemplate>, index: number): WorkTemplate {
+  return {
+    id: String(template.id || crypto.randomUUID()),
+    name: template.name || "未命名工作模板",
+    defaultTitle: template.defaultTitle || "",
+    defaultCategoryId: template.defaultCategoryId || "",
+    defaultStatus: normalizeWorkStatus(template.defaultStatus),
+    defaultProjectId: template.defaultProjectId || "",
+    defaultContent: template.defaultContent || "",
+    plannedDateRule: normalizeWorkTemplateDateRule(template.plannedDateRule),
+    dueDateRule: normalizeWorkTemplateDateRule(template.dueDateRule),
+    enabled: template.enabled !== false,
+    sortOrder: Number.isFinite(Number(template.sortOrder)) ? Number(template.sortOrder) : (index + 1) * 10,
     createdAt: template.createdAt || new Date().toISOString(),
     updatedAt: template.updatedAt || template.createdAt || new Date().toISOString(),
   };
@@ -250,6 +291,17 @@ function normalizeIsoDate(value: unknown): string {
   return typeof value === "string" && /^\d{4}-\d{2}-\d{2}$/.test(value) ? value : "";
 }
 
+function normalizeWorkTemplateDateRule(value: unknown): WorkTemplateDateRule {
+  if (value === "today" || value === "tomorrow" || value === "next_workday" || value === "next_week") return value;
+  return "";
+}
+
+function normalizeWorkSourceTemplateType(value: unknown, sourceTemplateId?: string): WorkItem["sourceTemplateType"] {
+  if (value === "work") return "work";
+  if (value === "routine" || sourceTemplateId) return "routine";
+  return undefined;
+}
+
 function normalizeProjectStatus(status?: string): ProjectStatus {
   if (status === "进行中" || status === "暂停中" || status === "待验收" || status === "已完成" || status === "长期维护") return status;
   return "未开始";
@@ -268,3 +320,4 @@ function normalizeProjectStepStatus(status?: string): ProjectStepStatus {
 function clampProgress(value?: number) {
   return Math.min(100, Math.max(0, Number(value) || 0));
 }
+
