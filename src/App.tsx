@@ -79,13 +79,33 @@ function App() {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(() => readSidebarCollapsed());
   const [notice, setNotice] = useState("");
 
+  function updateWorkWithProjectSync(id: string, input: WorkItemInput) {
+    const before = getDashboardData().workItems.find((item) => item.id === id);
+    const updated = runAction(() => updateWorkItem(id, input), "工作内容已更新");
+    if (!before || !updated) return updated;
+    if (before.status === "已完成" || updated.status !== "已完成") return updated;
+    if (updated.sourceProjectType !== "progressItem" || !updated.sourceProjectId || !updated.sourceProjectProgressItemId) return updated;
+
+    const currentData = getDashboardData();
+    const sourceProject = currentData.projects.find((project) => project.id === updated.sourceProjectId);
+    const sourceItem = sourceProject?.executionSteps?.find((item) => item.id === updated.sourceProjectProgressItemId);
+    if (!sourceProject || !sourceItem || sourceItem.status === "done") return updated;
+
+    const sourceName = sourceItem.name || updated.sourceProjectProgressItemName || "未命名推进事项";
+    const shouldSync = window.confirm(`该工作来源于项目推进事项「${sourceName}」，是否同步标记该推进事项为已完成？`);
+    if (!shouldSync) return updated;
+
+    runAction(() => updateProject(sourceProject.id, toProjectInputWithProgressItemDone(sourceProject, sourceItem.id)), "推进事项已同步完成");
+    return updated;
+  }
+
   const actions = useMemo(
     () => ({
       createDiary: (input: DiaryEntryInput) => runAction(() => createDiaryEntry(input), "日记已保存"),
       updateDiary: (id: string, input: DiaryEntryInput) => runAction(() => updateDiaryEntry(id, input), "日记已更新"),
       deleteDiary: (id: string) => runAction(() => deleteDiaryEntry(id), "日记已删除"),
       createWork: (input: WorkItemInput) => runAction(() => createWorkItem(input), "工作内容已保存"),
-      updateWork: (id: string, input: WorkItemInput) => runAction(() => updateWorkItem(id, input), "工作内容已更新"),
+      updateWork: updateWorkWithProjectSync,
       deleteWork: (id: string) => runAction(() => deleteWorkItem(id), "工作内容已删除"),
       createRoutineWorkAction: (input: RoutineWorkTemplateInput) => runAction(() => createRoutineWorkTemplate(input), "例行工作已保存"),
       updateRoutineWorkAction: (id: string, input: RoutineWorkTemplateInput, mode?: "future" | "sync_open") =>
@@ -264,6 +284,7 @@ function App() {
               onCreate={actions.createProjectAction}
               onUpdate={actions.updateProjectAction}
               onDelete={actions.deleteProjectAction}
+              onCreateWork={actions.createWork}
               onReorderProjects={actions.reorderProjectAction}
               onUpdateWork={actions.updateWork}
               onDeleteWork={actions.deleteWork}
@@ -471,6 +492,7 @@ function DashboardHome({ data, actions, onNavigate }: DashboardHomeProps) {
           workItems={data.workItems}
           diaryEntries={data.diaryEntries}
           ideas={data.ideas}
+          categories={data.categories}
           editing={editingDetail}
           onEdit={() => setEditingDetail(true)}
           onCancelEdit={() => setEditingDetail(false)}
@@ -483,10 +505,22 @@ function DashboardHome({ data, actions, onNavigate }: DashboardHomeProps) {
             actions.deleteProjectAction(project.id);
             closeRecordDetail();
           }}
+          onCreateWork={actions.createWork}
           onOpenLinkedRecord={(record) => setRecordDetail({ id: record.id, kind: record.kind, title: "", status: "" })}
         />
       )}    </div>
   );
+}
+
+function toProjectInputWithProgressItemDone(project: DashboardData["projects"][number], progressItemId: string): ProjectInput {
+  const { id: _id, createdAt: _createdAt, updatedAt: _updatedAt, ...input } = project;
+  const today = todayInputValue();
+  return {
+    ...input,
+    executionSteps: (project.executionSteps || []).map((item) =>
+      item.id === progressItemId ? { ...item, status: "done", completedAt: item.completedAt || today } : item,
+    ),
+  };
 }
 
 export default App;

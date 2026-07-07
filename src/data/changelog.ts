@@ -12,6 +12,15 @@ export interface ChangelogEntry {
 export const changelogEntries: ChangelogEntry[] = [
   {
     date: "2026-07-07",
+    title: "v1.3.0 项目推进清单与自动进度",
+    type: "功能优化",
+    modules: ["项目管理", "工作内容", "首页项目看板", "JSON 导入导出"],
+    summary:
+      "旧项目步骤命名升级为项目推进清单，推进事项和项目下一步动作可先进入新增工作弹窗再保存；项目进度改为按推进事项完成情况自动计算，无推进事项项目显示未拆分推进事项并从平均进度中排除。",
+    status: "待提交",
+  },
+  {
+    date: "2026-07-07",
     title: "v1.2.0 例行工作规则升级",
     type: "功能优化",
     modules: ["例行工作", "今日工作台", "JSON 导入导出", "localStorage"],

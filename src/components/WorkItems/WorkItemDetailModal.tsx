@@ -109,6 +109,10 @@ export function WorkItemDetailModal({
             <DetailMeta label="计划执行日" value={item.plannedDate ? formatDate(item.plannedDate) : "未设置"} />
             <DetailMeta label="关联项目" value={project?.name || "不关联"} />
             {item.sourceTemplateType === "work" && <DetailMeta label="来源模板" value={item.sourceTemplateName || "已删除模板"} />}
+            {item.sourceProjectType === "progressItem" && (
+              <DetailMeta label="来源" value={`项目推进事项：${getProgressItemSourceName(item, projects)}`} />
+            )}
+            {item.sourceProjectType === "nextAction" && <DetailMeta label="来源" value="项目下一步动作" />}
             {isRoutine && <DetailMeta label="来源例行规则" value={item.sourceTemplateName || "已删除规则"} />}
             {isRoutine && <DetailMeta label="原计划触发日期" value={item.routineOriginalDate ? formatDate(item.routineOriginalDate) : "未记录"} />}
             {isRoutine && <DetailMeta label="实际安排日期" value={formatDate(item.routineActualDate || item.date)} />}
@@ -147,6 +151,10 @@ function toWorkItemInput(item: WorkItem): WorkItemInput {
     sourceTemplateId: item.sourceTemplateId,
     sourceTemplateType: item.sourceTemplateType,
     sourceTemplateName: item.sourceTemplateName,
+    sourceProjectType: item.sourceProjectType,
+    sourceProjectId: item.sourceProjectId,
+    sourceProjectProgressItemId: item.sourceProjectProgressItemId,
+    sourceProjectProgressItemName: item.sourceProjectProgressItemName,
     routineRuleId: item.routineRuleId,
     routineOriginalDate: item.routineOriginalDate,
     routineActualDate: item.routineActualDate,
@@ -161,6 +169,13 @@ function toWorkItemInput(item: WorkItem): WorkItemInput {
     images: item.images,
     completedAt: item.completedAt,
   };
+}
+
+function getProgressItemSourceName(item: WorkItem, projects: Project[]): string {
+  const project = projects.find((entry) => entry.id === item.sourceProjectId);
+  const progressItem = project?.executionSteps?.find((entry) => entry.id === item.sourceProjectProgressItemId);
+  if (progressItem) return progressItem.name || item.sourceProjectProgressItemName || "未命名推进事项";
+  return item.sourceProjectProgressItemName ? `${item.sourceProjectProgressItemName}（原推进事项已删除）` : "原推进事项已删除";
 }
 
 function getTomorrow(date: string): string {

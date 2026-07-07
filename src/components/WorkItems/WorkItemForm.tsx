@@ -19,8 +19,8 @@ export function WorkItemForm({ item, initialInput, categories, projects, onCance
   const [categoryId, setCategoryId] = useState(item?.categoryId || initialInput?.categoryId || categories[0]?.id || "");
   const [status, setStatus] = useState<WorkStatus>(item?.status || initialInput?.status || "待处理");
   const [content, setContent] = useState(item?.content || initialInput?.content || "");
-  const [date, setDate] = useState(item?.date || initialInput?.date || todayInputValue());
-  const [plannedDate, setPlannedDate] = useState(item?.plannedDate || initialInput?.plannedDate || "");
+  const [date, setDate] = useState(item?.date ?? initialInput?.date ?? todayInputValue());
+  const [plannedDate, setPlannedDate] = useState(item?.plannedDate ?? initialInput?.plannedDate ?? "");
   const [projectId, setProjectId] = useState(item?.projectId || initialInput?.projectId || "");
   const [images, setImages] = useState<string[]>(item?.images || initialInput?.images || []);
   const [error, setError] = useState("");
@@ -43,6 +43,10 @@ export function WorkItemForm({ item, initialInput, categories, projects, onCance
       sourceTemplateId: item?.sourceTemplateId || initialInput?.sourceTemplateId,
       sourceTemplateType: item?.sourceTemplateType || initialInput?.sourceTemplateType,
       sourceTemplateName: item?.sourceTemplateName || initialInput?.sourceTemplateName,
+      sourceProjectType: item?.sourceProjectType || initialInput?.sourceProjectType,
+      sourceProjectId: item?.sourceProjectId || initialInput?.sourceProjectId,
+      sourceProjectProgressItemId: item?.sourceProjectProgressItemId || initialInput?.sourceProjectProgressItemId,
+      sourceProjectProgressItemName: item?.sourceProjectProgressItemName || initialInput?.sourceProjectProgressItemName,
       routineRuleId: item?.routineRuleId || initialInput?.routineRuleId,
       routineOriginalDate: item?.routineOriginalDate || initialInput?.routineOriginalDate,
       routineActualDate: item?.routineActualDate || initialInput?.routineActualDate,

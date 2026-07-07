@@ -1,4 +1,5 @@
 import type { Project } from "../../types/dashboard";
+import { getAverageProjectProgress } from "../../utils/projectProgress";
 import { EmptyState } from "../Common/EmptyState";
 
 interface ProjectOverviewProps {
@@ -39,13 +40,14 @@ function ProjectOverviewGroup({ title, emptyTitle, projects }: ProjectOverviewGr
           <div
             className={`completion-donut project-status-donut ${stats.total === 0 ? "empty" : ""}`}
             style={{ background: chartBackground }}
-            aria-label={`${title}平均进度 ${stats.averageProgress}%`}
+            aria-label={stats.averageProgress === null ? `${title}未拆分推进事项` : `${title}平均进度 ${stats.averageProgress}%`}
           >
             <div className="completion-donut-center">
-              <strong>{stats.averageProgress}%</strong>
-              <span>平均进度</span>
+              <strong>{stats.averageProgress === null ? "未拆分" : `${stats.averageProgress}%`}</strong>
+              <span>{stats.averageProgress === null ? "推进事项" : "平均进度"}</span>
             </div>
           </div>
+          <p className="muted-text project-average-note">平均进度仅统计已拆分项目。</p>
           <div className="project-status-legend" aria-label={`${title}状态分布`}>
             <StatusLegend color="#64748b" label="未开始" />
             <StatusLegend color="#2563eb" label="进行中" />
@@ -92,14 +94,15 @@ function getProjectStats(projects: Project[]) {
   const notStarted = projects.filter((project) => project.status === "未开始").length;
   const active = projects.filter((project) => project.status === "进行中").length;
   const completed = projects.filter((project) => project.status === "已完成").length;
-  const averageProgress = total > 0 ? Math.round(projects.reduce((sum, project) => sum + clampProgress(project.progress), 0) / total) : 0;
+  const progress = getAverageProjectProgress(projects);
 
   return {
     total,
     notStarted,
     active,
     completed,
-    averageProgress,
+    averageProgress: progress.average,
+    progressCount: progress.counted,
     other: Math.max(0, total - notStarted - active - completed),
   };
 }
@@ -117,11 +120,6 @@ function makeProjectChartBackground(stats: ReturnType<typeof getProjectStats>) {
     #0f766e ${activeEnd}% ${completedEnd}%,
     #94a3b8 ${completedEnd}% 100%
   )`;
-}
-
-function clampProgress(value: number): number {
-  if (!Number.isFinite(value)) return 0;
-  return Math.min(100, Math.max(0, Math.round(value)));
 }
 
 function sortProjectsByUpdatedAt(projects: Project[]): Project[] {

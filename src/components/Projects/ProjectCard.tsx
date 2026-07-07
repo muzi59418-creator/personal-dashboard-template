@@ -3,6 +3,7 @@ import type { KeyboardEvent, MouseEvent, PointerEvent, SyntheticEvent } from "re
 import type { Project, ProjectStatus } from "../../types/dashboard";
 import { PROJECT_STATUSES } from "../../types/dashboard";
 import { formatDateTime } from "../../utils/date";
+import { getProjectProgressSummary } from "../../utils/projectProgress";
 
 interface ProjectCardProps {
   project: Project;
@@ -18,6 +19,7 @@ export function ProjectCard({ project, onOpen, sortIndex, totalCount, onMoveUp, 
   const canMoveUp = typeof sortIndex === "number" && sortIndex > 0 && Boolean(onMoveUp);
   const canMoveDown = typeof sortIndex === "number" && typeof totalCount === "number" && sortIndex < totalCount - 1 && Boolean(onMoveDown);
   const showSortActions = Boolean(onMoveUp || onMoveDown);
+  const progressSummary = getProjectProgressSummary(project);
 
   function handleKeyDown(event: KeyboardEvent<HTMLElement>) {
     if (!onOpen) return;
@@ -61,7 +63,13 @@ export function ProjectCard({ project, onOpen, sortIndex, totalCount, onMoveUp, 
         <div className="project-compact-title">
           <h3>{project.name}</h3>
           <div className="project-compact-meta">
-            <strong>{project.progress}%</strong>
+            <strong>{progressSummary.hasProgressItems ? `${progressSummary.percent}%` : progressSummary.label}</strong>
+            {progressSummary.hasProgressItems && (
+              <>
+                <span className="meta-separator">·</span>
+                <span>{progressSummary.detail}</span>
+              </>
+            )}
             <span className="meta-separator">·</span>
             <span>更新 {formatDateTime(project.updatedAt)}</span>
           </div>

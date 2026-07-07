@@ -22,6 +22,7 @@ import { applyWorkResponsibilitiesV1Migration } from "./workResponsibilitiesMigr
 
 export const STORAGE_KEY = "personal-dashboard-template:v1";
 const V120_BACKUP_KEY = `${STORAGE_KEY}:backup-before-v1.2.0`;
+const V130_BACKUP_KEY = `${STORAGE_KEY}:backup-before-v1.3.0`;
 
 export function createEmptyDashboardData(): DashboardData {
   return {
@@ -51,7 +52,7 @@ export function readDashboard(): DashboardData {
 
   try {
     const parsed = JSON.parse(raw);
-    backupBeforeV120Migration(raw, parsed);
+    backupBeforeVersionMigration(raw, parsed);
     const normalized = normalizeDashboardData(parsed);
     const migrated = applyWorkResponsibilitiesV1Migration(normalized);
     const finalData = migrateDashboardData(migrated.data);
@@ -101,7 +102,7 @@ function normalizeDashboardData(value: Partial<DashboardData>): DashboardData {
 
 function migrateDashboardData(data: DashboardData): DashboardData {
   const migrated = applyWorkResponsibilitiesV1Migration(data).data;
-  ["v1.1.0-workbench-planned-date-templates", "v1.2.0-routine-rules"].forEach((migrationName) => {
+  ["v1.1.0-workbench-planned-date-templates", "v1.2.0-routine-rules", "v1.3.0-project-progress-items"].forEach((migrationName) => {
     if (!migrated.migrations.includes(migrationName)) {
       migrated.migrations = [...migrated.migrations, migrationName];
     }
@@ -140,6 +141,10 @@ function normalizeWorkItem(item: Partial<WorkItem>): WorkItem {
     sourceTemplateId: item.sourceTemplateId || undefined,
     sourceTemplateType: normalizeWorkSourceTemplateType(item.sourceTemplateType, item.sourceTemplateId),
     sourceTemplateName: item.sourceTemplateName || "",
+    sourceProjectType: normalizeWorkSourceProjectType(item.sourceProjectType),
+    sourceProjectId: typeof item.sourceProjectId === "string" ? item.sourceProjectId : "",
+    sourceProjectProgressItemId: typeof item.sourceProjectProgressItemId === "string" ? item.sourceProjectProgressItemId : "",
+    sourceProjectProgressItemName: typeof item.sourceProjectProgressItemName === "string" ? item.sourceProjectProgressItemName : "",
     routineRuleId: item.routineRuleId || item.sourceTemplateId || undefined,
     routineOriginalDate: normalizeIsoDate(item.routineOriginalDate || item.date),
     routineActualDate: normalizeIsoDate(item.routineActualDate || item.date),
@@ -262,7 +267,7 @@ function normalizeProject(project: Partial<Project>): Project {
 function normalizeProjectStep(step: Partial<ProjectStep>): ProjectStep {
   return {
     id: step.id || crypto.randomUUID(),
-    name: step.name || "未命名步骤",
+    name: step.name || "未命名推进事项",
     description: step.description || "",
     status: normalizeProjectStepStatus(step.status),
     dueDate: step.dueDate || "",
@@ -332,6 +337,11 @@ function normalizeWorkSourceTemplateType(value: unknown, sourceTemplateId?: stri
   return undefined;
 }
 
+function normalizeWorkSourceProjectType(value: unknown): WorkItem["sourceProjectType"] {
+  if (value === "progressItem" || value === "nextAction") return value;
+  return undefined;
+}
+
 function normalizeDailyHolidayPolicy(value: unknown): RoutineDailyHolidayPolicy {
   return value === "postpone" ? "postpone" : "generate";
 }
@@ -341,9 +351,18 @@ function normalizePendingTaskPolicy(value: unknown): RoutineWorkTemplate["pendin
   return "keep";
 }
 
-function backupBeforeV120Migration(raw: string, parsed: Partial<DashboardData>): void {
-  if (parsed?.schemaVersion === SCHEMA_VERSION || localStorage.getItem(V120_BACKUP_KEY)) return;
-  localStorage.setItem(V120_BACKUP_KEY, raw);
+function backupBeforeVersionMigration(raw: string, parsed: Partial<DashboardData>): void {
+  if (parsed?.schemaVersion === SCHEMA_VERSION) return;
+  const rank = getVersionRank(parsed?.schemaVersion || parsed?.appVersion || parsed?.version);
+  if (rank < 2 && !localStorage.getItem(V120_BACKUP_KEY)) localStorage.setItem(V120_BACKUP_KEY, raw);
+  if (rank < 3 && !localStorage.getItem(V130_BACKUP_KEY)) localStorage.setItem(V130_BACKUP_KEY, raw);
+}
+
+function getVersionRank(version: unknown): number {
+  if (version === "1.3.0") return 3;
+  if (version === "1.2.0") return 2;
+  if (version === "1.1.0") return 1;
+  return 0;
 }
 
 function normalizeProjectStatus(status?: string): ProjectStatus {

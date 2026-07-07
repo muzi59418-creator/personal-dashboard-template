@@ -3,6 +3,7 @@ import { useState } from "react";
 import type { Project, ProjectInput, ProjectQuadrant, ProjectStatus, ProjectStep, ProjectStepStatus, ProjectType } from "../../types/dashboard";
 import { PROJECT_QUADRANTS, PROJECT_STATUSES, PROJECT_STEP_STATUSES } from "../../types/dashboard";
 import { createId } from "../../utils/id";
+import { getProjectProgressSummary } from "../../utils/projectProgress";
 import { DateInput } from "../Common/DateInput";
 
 interface ProjectFormProps {
@@ -29,7 +30,6 @@ export function ProjectForm({ project, onCancel, onSubmit }: ProjectFormProps) {
   const [type, setType] = useState<ProjectType>(project?.type || "work");
   const [status, setStatus] = useState<ProjectStatus>(project?.status || "未开始");
   const [quadrant, setQuadrant] = useState<ProjectQuadrant>(project?.quadrant || "important_not_urgent");
-  const [progress, setProgress] = useState(project?.progress || 0);
   const [startDate, setStartDate] = useState(project?.startDate || "");
   const [dueDate, setDueDate] = useState(project?.dueDate || "");
   const [background, setBackground] = useState(project?.background || project?.description || "");
@@ -44,6 +44,7 @@ export function ProjectForm({ project, onCancel, onSubmit }: ProjectFormProps) {
   const [completionResult, setCompletionResult] = useState(project?.completionResult || "");
   const [retrospective, setRetrospective] = useState(project?.retrospective || "");
   const [error, setError] = useState("");
+  const progressSummary = getProjectProgressSummary({ executionSteps });
 
   function submit(event: React.FormEvent) {
     event.preventDefault();
@@ -58,7 +59,7 @@ export function ProjectForm({ project, onCancel, onSubmit }: ProjectFormProps) {
       type,
       status,
       quadrant,
-      progress: Math.min(100, Math.max(0, progress)),
+      progress: project?.progress || 0,
       startDate,
       dueDate,
       description,
@@ -89,6 +90,7 @@ export function ProjectForm({ project, onCancel, onSubmit }: ProjectFormProps) {
   }
 
   function deleteStep(stepId: string) {
+    if (!window.confirm("确认删除这个推进事项？已关联的工作内容会继续保留。")) return;
     setExecutionSteps((current) => current.filter((step) => step.id !== stepId));
   }
 
@@ -129,10 +131,11 @@ export function ProjectForm({ project, onCancel, onSubmit }: ProjectFormProps) {
               ))}
             </select>
           </label>
-          <label>
-            项目进度：{progress}%
-            <input type="range" min="0" max="100" value={progress} onChange={(event) => setProgress(Number(event.target.value))} />
-          </label>
+          <div className="readonly-field">
+            <span>项目进度</span>
+            <strong>{progressSummary.hasProgressItems ? `${progressSummary.percent}%` : progressSummary.label}</strong>
+            {progressSummary.hasProgressItems && <small>{progressSummary.detail}</small>}
+          </div>
         </div>
         <div className="form-grid">
           <label>
@@ -167,27 +170,27 @@ export function ProjectForm({ project, onCancel, onSubmit }: ProjectFormProps) {
         </div>
       </ProjectFormSection>
 
-      <ProjectFormSection title="项目执行步骤">
+      <ProjectFormSection title="项目推进清单">
         <div className="step-list">
           {executionSteps.map((step, index) => (
             <div className="project-step-editor" key={step.id}>
               <div className="project-step-editor-head">
-                <strong>步骤 {index + 1}</strong>
-                <button className="icon-button danger-icon" type="button" aria-label="删除步骤" title="删除步骤" onClick={() => deleteStep(step.id)}>
+                <strong>推进事项 {index + 1}</strong>
+                <button className="icon-button danger-icon" type="button" aria-label="删除推进事项" title="删除推进事项" onClick={() => deleteStep(step.id)}>
                   <Trash2 size={15} />
                 </button>
               </div>
               <label>
-                步骤名称
+                事项名称
                 <input value={step.name} onChange={(event) => updateStep(step.id, { name: event.target.value })} />
               </label>
               <label>
-                步骤说明
+                事项说明
                 <textarea value={step.description} onChange={(event) => updateStep(step.id, { description: event.target.value })} rows={2} />
               </label>
               <div className="form-grid">
                 <label>
-                  步骤状态
+                  事项状态
                   <select value={step.status} onChange={(event) => updateStep(step.id, { status: event.target.value as ProjectStepStatus })}>
                     {PROJECT_STEP_STATUSES.map((stepStatus) => (
                       <option key={stepStatus} value={stepStatus}>
@@ -208,9 +211,10 @@ export function ProjectForm({ project, onCancel, onSubmit }: ProjectFormProps) {
             </div>
           ))}
         </div>
+        {executionSteps.length === 0 && <p className="muted-text">未拆分推进事项。</p>}
         <button className="secondary-button" type="button" onClick={addStep}>
           <Plus size={16} />
-          新增步骤
+          新增推进事项
         </button>
       </ProjectFormSection>
 

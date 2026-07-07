@@ -20,6 +20,7 @@ interface ProjectListProps {
   onCreate: (input: ProjectInput) => void;
   onUpdate: (id: string, input: ProjectInput) => void;
   onDelete: (id: string) => void;
+  onCreateWork: (input: WorkItemInput) => void;
   onReorderProjects: (projectIds: string[]) => void;
   onUpdateWork: (id: string, input: WorkItemInput) => void;
   onDeleteWork: (id: string) => void;
@@ -40,6 +41,7 @@ export function ProjectList({
   onCreate,
   onUpdate,
   onDelete,
+  onCreateWork,
   onReorderProjects,
   onUpdateWork,
   onDeleteWork,
@@ -123,6 +125,7 @@ export function ProjectList({
           workItems={workItems}
           diaryEntries={diaryEntries}
           ideas={ideas}
+          categories={categories}
           editing={editingProject}
           onEdit={() => setEditingProject(true)}
           onCancelEdit={() => setEditingProject(false)}
@@ -139,6 +142,7 @@ export function ProjectList({
             setSelectedProjectId("");
             setEditingProject(false);
           }}
+          onCreateWork={onCreateWork}
           onOpenLinkedRecord={openLinkedRecord}
         />
       )}

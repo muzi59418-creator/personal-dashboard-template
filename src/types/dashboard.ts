@@ -13,6 +13,7 @@ export type RoutineResumeStrategy = "resume_today" | "next_due";
 export type RoutinePendingTaskPolicy = "keep" | "skip" | "postpone_to_resume";
 export type WorkTemplateDateRule = "" | "today" | "tomorrow" | "next_workday" | "next_week";
 export type WorkSourceTemplateType = "routine" | "work";
+export type WorkSourceProjectType = "progressItem" | "nextAction";
 
 export interface ProjectStep {
   id: string;
@@ -48,6 +49,10 @@ export interface WorkItem {
   sourceTemplateId?: string;
   sourceTemplateType?: WorkSourceTemplateType;
   sourceTemplateName?: string;
+  sourceProjectType?: WorkSourceProjectType;
+  sourceProjectId?: string;
+  sourceProjectProgressItemId?: string;
+  sourceProjectProgressItemName?: string;
   routineRuleId?: string;
   routineOriginalDate?: string;
   routineActualDate?: string;

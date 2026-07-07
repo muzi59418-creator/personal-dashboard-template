@@ -284,6 +284,8 @@ export function WorkItemList({
                               </span>
                             )}
                             {item.projectId && <span className="chip outline">{projectMap.get(item.projectId) || "关联项目"}</span>}
+                            {item.sourceProjectType === "progressItem" && <span className="chip outline">来源：推进事项</span>}
+                            {item.sourceProjectType === "nextAction" && <span className="chip outline">来源：项目下一步动作</span>}
                             {item.plannedDate && <span className="chip outline">计划 {formatDate(item.plannedDate)}</span>}
                             {item.sourceTemplateType === "work" && <span className="chip outline">模板：{item.sourceTemplateName || "已删除模板"}</span>}
                             {(item.images?.length || 0) > 0 && <span className="chip outline">{item.images?.length || 0} 张图片</span>}

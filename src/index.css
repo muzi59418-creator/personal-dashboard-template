@@ -1030,6 +1030,25 @@ button.mobile-sidebar-toggle {
   font-weight: 500;
 }
 
+.readonly-field {
+  display: grid;
+  align-content: start;
+  gap: 6px;
+  padding: 11px 12px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: #f8fafc;
+}
+
+.readonly-field span,
+.readonly-field small {
+  color: var(--muted);
+}
+
+.readonly-field strong {
+  color: var(--text);
+}
+
 .form-stack {
   display: grid;
   gap: 14px;
@@ -2248,6 +2267,19 @@ legend {
   min-height: 32px;
   padding: 6px 9px;
   font-size: 12px;
+}
+
+.inline-action-row {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.project-average-note {
+  margin: -4px 0 6px;
+  text-align: center;
 }
 
 .icon-only-button {
