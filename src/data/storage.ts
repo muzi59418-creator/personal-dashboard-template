@@ -1,4 +1,4 @@
-﻿import { createSeedData } from "./seed";
+import { createSeedData } from "./seed";
 import type {
   DashboardData,
   DiaryEntry,
@@ -8,6 +8,7 @@ import type {
   ProjectStatus,
   ProjectStep,
   ProjectStepStatus,
+  RoutineDailyHolidayPolicy,
   RoutineWorkFrequency,
   RoutineWorkTemplate,
   WorkTemplate,
@@ -20,6 +21,7 @@ import { APP_VERSION, SCHEMA_VERSION } from "./appVersion";
 import { applyWorkResponsibilitiesV1Migration } from "./workResponsibilitiesMigration";
 
 export const STORAGE_KEY = "personal-dashboard-template:v1";
+const V120_BACKUP_KEY = `${STORAGE_KEY}:backup-before-v1.2.0`;
 
 export function createEmptyDashboardData(): DashboardData {
   return {
@@ -48,10 +50,13 @@ export function readDashboard(): DashboardData {
   }
 
   try {
-    const normalized = normalizeDashboardData(JSON.parse(raw));
+    const parsed = JSON.parse(raw);
+    backupBeforeV120Migration(raw, parsed);
+    const normalized = normalizeDashboardData(parsed);
     const migrated = applyWorkResponsibilitiesV1Migration(normalized);
-    if (migrated.changed) localStorage.setItem(STORAGE_KEY, JSON.stringify(migrated.data));
-    return migrated.data;
+    const finalData = migrateDashboardData(migrated.data);
+    if (migrated.changed || finalData.schemaVersion === SCHEMA_VERSION) localStorage.setItem(STORAGE_KEY, JSON.stringify(finalData));
+    return finalData;
   } catch {
     const seeded = migrateDashboardData(normalizeDashboardData(createSeedData()));
     localStorage.setItem(STORAGE_KEY, JSON.stringify(seeded));
@@ -96,10 +101,11 @@ function normalizeDashboardData(value: Partial<DashboardData>): DashboardData {
 
 function migrateDashboardData(data: DashboardData): DashboardData {
   const migrated = applyWorkResponsibilitiesV1Migration(data).data;
-  const migrationName = "v1.1.0-workbench-planned-date-templates";
-  if (!migrated.migrations.includes(migrationName)) {
-    migrated.migrations = [...migrated.migrations, migrationName];
-  }
+  ["v1.1.0-workbench-planned-date-templates", "v1.2.0-routine-rules"].forEach((migrationName) => {
+    if (!migrated.migrations.includes(migrationName)) {
+      migrated.migrations = [...migrated.migrations, migrationName];
+    }
+  });
   migrated.version = APP_VERSION;
   migrated.appVersion = APP_VERSION;
   migrated.schemaVersion = SCHEMA_VERSION;
@@ -134,6 +140,21 @@ function normalizeWorkItem(item: Partial<WorkItem>): WorkItem {
     sourceTemplateId: item.sourceTemplateId || undefined,
     sourceTemplateType: normalizeWorkSourceTemplateType(item.sourceTemplateType, item.sourceTemplateId),
     sourceTemplateName: item.sourceTemplateName || "",
+    routineRuleId: item.routineRuleId || item.sourceTemplateId || undefined,
+    routineOriginalDate: normalizeIsoDate(item.routineOriginalDate || item.date),
+    routineActualDate: normalizeIsoDate(item.routineActualDate || item.date),
+    routineHolidayPostponed: item.routineHolidayPostponed === true,
+    routineManualPostponed: item.routineManualPostponed === true,
+    routineSkipped: item.routineSkipped === true || item.status === "已跳过",
+    routineSkippedAt: typeof item.routineSkippedAt === "string" ? item.routineSkippedAt : "",
+    routineSkipReason: typeof item.routineSkipReason === "string" ? item.routineSkipReason : "",
+    routineMerged: item.routineMerged === true,
+    routineMergedTriggerDates: Array.isArray(item.routineMergedTriggerDates)
+      ? Array.from(new Set(item.routineMergedTriggerDates.map(String).filter((date) => normalizeIsoDate(date)))).sort()
+      : item.sourceTemplateId
+        ? [normalizeIsoDate(item.routineOriginalDate || item.date)].filter(Boolean)
+        : [],
+    routineDetachedFromRuleId: typeof item.routineDetachedFromRuleId === "string" ? item.routineDetachedFromRuleId : "",
     images: compactImages(item.images),
     completedAt: typeof item.completedAt === "string" ? item.completedAt : "",
     createdAt: item.createdAt || new Date().toISOString(),
@@ -154,6 +175,15 @@ function normalizeRoutineWorkTemplate(template: Partial<RoutineWorkTemplate>): R
     customDate: normalizeIsoDate(template.customDate),
     defaultStatus: normalizeWorkStatus(template.defaultStatus),
     enabled: template.enabled !== false,
+    effectiveDate: normalizeIsoDate(template.effectiveDate),
+    endDate: normalizeIsoDate(template.endDate),
+    paused: template.paused === true,
+    pausedUntil: normalizeIsoDate(template.pausedUntil),
+    pauseResumeMode: template.pauseResumeMode === "date" ? "date" : "manual",
+    resumeStrategy: template.resumeStrategy === "next_due" ? "next_due" : "resume_today",
+    pendingTaskPolicy: normalizePendingTaskPolicy(template.pendingTaskPolicy),
+    dailyHolidayPolicy: normalizeDailyHolidayPolicy(template.dailyHolidayPolicy),
+    source: template.source || "local",
     createdAt: template.createdAt || new Date().toISOString(),
     updatedAt: template.updatedAt || template.createdAt || new Date().toISOString(),
   };
@@ -265,7 +295,7 @@ function normalizeIdeaStatus(status?: string): Idea["status"] {
 }
 
 function normalizeWorkStatus(status?: string): WorkStatus {
-  if (status === "进行中" || status === "已完成" || status === "暂停") return status;
+  if (status === "进行中" || status === "已完成" || status === "暂停" || status === "已跳过") return status;
   return "待处理";
 }
 
@@ -302,6 +332,20 @@ function normalizeWorkSourceTemplateType(value: unknown, sourceTemplateId?: stri
   return undefined;
 }
 
+function normalizeDailyHolidayPolicy(value: unknown): RoutineDailyHolidayPolicy {
+  return value === "postpone" ? "postpone" : "generate";
+}
+
+function normalizePendingTaskPolicy(value: unknown): RoutineWorkTemplate["pendingTaskPolicy"] {
+  if (value === "skip" || value === "postpone_to_resume") return value;
+  return "keep";
+}
+
+function backupBeforeV120Migration(raw: string, parsed: Partial<DashboardData>): void {
+  if (parsed?.schemaVersion === SCHEMA_VERSION || localStorage.getItem(V120_BACKUP_KEY)) return;
+  localStorage.setItem(V120_BACKUP_KEY, raw);
+}
+
 function normalizeProjectStatus(status?: string): ProjectStatus {
   if (status === "进行中" || status === "暂停中" || status === "待验收" || status === "已完成" || status === "长期维护") return status;
   return "未开始";
@@ -320,4 +364,3 @@ function normalizeProjectStepStatus(status?: string): ProjectStepStatus {
 function clampProgress(value?: number) {
   return Math.min(100, Math.max(0, Number(value) || 0));
 }
-

@@ -31,21 +31,27 @@ import {
   deleteWorkTemplate,
   deleteWorkItem,
   exportData,
-  generateTodayRoutineWork,
   getDashboardData,
   importData,
+  pauseRoutineWorkTemplate,
+  postponeRoutineWorkItem,
   reorderProjects,
   reorderWorkTemplates,
+  resumeRoutineWorkTemplate,
+  skipRoutineWorkItem,
+  syncRoutineWorkForDate,
   updateCategory,
   updateDiaryEntry,
   updateIdea,
   updateProject,
   updateRoutineWorkTemplate,
+  updateRoutineWorkTemplateWithMode,
   updateWorkTemplate,
   updateWorkResponsibilities,
   updateWorkItem,
 } from "./data/repository";
 import { readSidebarCollapsed, writeSidebarCollapsed } from "./data/uiPreferences";
+import { todayInputValue } from "./utils/date";
 import { MobileTabBar } from "./components/Layout/MobileTabBar";
 import { Sidebar, type ViewKey } from "./components/Layout/Sidebar";
 import { CategoryManager } from "./components/Categories/CategoryManager";
@@ -82,19 +88,33 @@ function App() {
       updateWork: (id: string, input: WorkItemInput) => runAction(() => updateWorkItem(id, input), "工作内容已更新"),
       deleteWork: (id: string) => runAction(() => deleteWorkItem(id), "工作内容已删除"),
       createRoutineWorkAction: (input: RoutineWorkTemplateInput) => runAction(() => createRoutineWorkTemplate(input), "例行工作已保存"),
-      updateRoutineWorkAction: (id: string, input: RoutineWorkTemplateInput) => runAction(() => updateRoutineWorkTemplate(id, input), "例行工作已更新"),
-      deleteRoutineWorkAction: (id: string) => runAction(() => deleteRoutineWorkTemplate(id), "例行工作已删除"),
+      updateRoutineWorkAction: (id: string, input: RoutineWorkTemplateInput, mode?: "future" | "sync_open") =>
+        runAction(() => (mode ? updateRoutineWorkTemplateWithMode(id, input, mode) : updateRoutineWorkTemplate(id, input)), "例行工作已更新"),
+      deleteRoutineWorkAction: (id: string, action?: "keep" | "skip" | "delete") => runAction(() => deleteRoutineWorkTemplate(id, action), "例行工作已删除"),
+      pauseRoutineWorkAction: (
+        id: string,
+        pendingTaskPolicy: RoutineWorkTemplateInput["pendingTaskPolicy"],
+        pausedUntil?: string,
+        resumeStrategy?: RoutineWorkTemplateInput["resumeStrategy"],
+      ) => runAction(() => pauseRoutineWorkTemplate(id, pendingTaskPolicy, pausedUntil, resumeStrategy), "例行工作已暂停"),
+      resumeRoutineWorkAction: (id: string, strategy?: RoutineWorkTemplateInput["resumeStrategy"]) =>
+        runAction(() => resumeRoutineWorkTemplate(id, strategy), "例行工作已恢复"),
       createWorkTemplateAction: (input: WorkTemplateInput) => runAction(() => createWorkTemplate(input), "工作模板已保存"),
       updateWorkTemplateAction: (id: string, input: WorkTemplateInput) => runAction(() => updateWorkTemplate(id, input), "工作模板已更新"),
       deleteWorkTemplateAction: (id: string) => runAction(() => deleteWorkTemplate(id), "工作模板已删除"),
       reorderWorkTemplateAction: (templateIds: string[]) => runAction(() => reorderWorkTemplates(templateIds), "模板顺序已保存"),
       generateRoutineWorkAction: () => {
-        const created = runAction(() => generateTodayRoutineWork(), "今日例行工作已生成");
-        if (created?.length === 0) {
+        const result = runAction(() => syncRoutineWorkForDate(), "例行工作已检查同步");
+        if (result?.warnings.length) {
+          setNotice(result.warnings[0]);
+          window.setTimeout(() => setNotice(""), 4200);
+        } else if (result?.created.length === 0 && result.updated.length === 0) {
           setNotice("今日例行工作已是最新");
           window.setTimeout(() => setNotice(""), 2400);
         }
       },
+      skipRoutineWorkAction: (id: string, reason?: string) => runAction(() => skipRoutineWorkItem(id, reason), "本次例行工作已跳过"),
+      postponeRoutineWorkAction: (id: string, targetDate: string) => runAction(() => postponeRoutineWorkItem(id, targetDate), "例行工作已顺延"),
       createIdeaAction: (input: IdeaInput) => runAction(() => createIdea(input), "想法已保存"),
       updateIdeaAction: (id: string, input: IdeaInput) => runAction(() => updateIdea(id, input), "想法已更新"),
       deleteIdeaAction: (id: string) => runAction(() => deleteIdea(id), "想法已删除"),
@@ -115,8 +135,30 @@ function App() {
   );
 
   useEffect(() => {
-    const created = generateTodayRoutineWork();
-    if (created.length > 0) setData(getDashboardData());
+    let checkedDate = "";
+    function syncTodayRoutines() {
+      const today = todayInputValue();
+      const result = syncRoutineWorkForDate(today);
+      checkedDate = today;
+      if (result.created.length > 0 || result.updated.length > 0) setData(getDashboardData());
+      if (result.warnings.length > 0) {
+        setNotice(result.warnings[0]);
+        window.setTimeout(() => setNotice(""), 4200);
+      }
+    }
+
+    syncTodayRoutines();
+    const handleFocus = () => syncTodayRoutines();
+    const timer = window.setInterval(() => {
+      if (todayInputValue() !== checkedDate) syncTodayRoutines();
+    }, 60_000);
+    window.addEventListener("focus", handleFocus);
+    document.addEventListener("visibilitychange", handleFocus);
+    return () => {
+      window.clearInterval(timer);
+      window.removeEventListener("focus", handleFocus);
+      document.removeEventListener("visibilitychange", handleFocus);
+    };
   }, []);
 
   function runAction<T>(work: () => T, successMessage: string): T | undefined {
@@ -186,7 +228,11 @@ function App() {
               onCreateRoutineWork={actions.createRoutineWorkAction}
               onUpdateRoutineWork={actions.updateRoutineWorkAction}
               onDeleteRoutineWork={actions.deleteRoutineWorkAction}
+              onPauseRoutineWork={actions.pauseRoutineWorkAction}
+              onResumeRoutineWork={actions.resumeRoutineWorkAction}
               onGenerateRoutineWork={actions.generateRoutineWorkAction}
+              onSkipRoutineWorkItem={actions.skipRoutineWorkAction}
+              onPostponeRoutineWorkItem={actions.postponeRoutineWorkAction}
               onCreateWorkTemplate={actions.createWorkTemplateAction}
               onUpdateWorkTemplate={actions.updateWorkTemplateAction}
               onDeleteWorkTemplate={actions.deleteWorkTemplateAction}
@@ -264,13 +310,22 @@ function useDashboardActionsShape() {
     updateWork: (_id: string, _input: WorkItemInput) => undefined as unknown,
     deleteWork: (_id: string) => undefined as unknown,
     createRoutineWorkAction: (_input: RoutineWorkTemplateInput) => undefined as unknown,
-    updateRoutineWorkAction: (_id: string, _input: RoutineWorkTemplateInput) => undefined as unknown,
-    deleteRoutineWorkAction: (_id: string) => undefined as unknown,
+    updateRoutineWorkAction: (_id: string, _input: RoutineWorkTemplateInput, _mode?: "future" | "sync_open") => undefined as unknown,
+    deleteRoutineWorkAction: (_id: string, _action?: "keep" | "skip" | "delete") => undefined as unknown,
+    pauseRoutineWorkAction: (
+      _id: string,
+      _pendingTaskPolicy?: RoutineWorkTemplateInput["pendingTaskPolicy"],
+      _pausedUntil?: string,
+      _resumeStrategy?: RoutineWorkTemplateInput["resumeStrategy"],
+    ) => undefined as unknown,
+    resumeRoutineWorkAction: (_id: string, _strategy?: RoutineWorkTemplateInput["resumeStrategy"]) => undefined as unknown,
     createWorkTemplateAction: (_input: WorkTemplateInput) => undefined as unknown,
     updateWorkTemplateAction: (_id: string, _input: WorkTemplateInput) => undefined as unknown,
     deleteWorkTemplateAction: (_id: string) => undefined as unknown,
     reorderWorkTemplateAction: (_templateIds: string[]) => undefined as unknown,
     generateRoutineWorkAction: () => undefined as unknown,
+    skipRoutineWorkAction: (_id: string, _reason?: string) => undefined as unknown,
+    postponeRoutineWorkAction: (_id: string, _targetDate: string) => undefined as unknown,
     createIdeaAction: (_input: IdeaInput) => undefined as unknown,
     updateIdeaAction: (_id: string, _input: IdeaInput) => undefined as unknown,
     deleteIdeaAction: (_id: string) => undefined as unknown,
@@ -319,6 +374,8 @@ function DashboardHome({ data, actions, onNavigate }: DashboardHomeProps) {
           items={data.workItems}
           projects={data.projects}
           onUpdateWork={actions.updateWork}
+          onSkipRoutineWork={actions.skipRoutineWorkAction}
+          onPostponeRoutineWork={actions.postponeRoutineWorkAction}
           onOpenWork={(workId) => {
             const selected = data.workItems.find((item) => item.id === workId);
             setRecordDetail({ id: workId, kind: "work", title: selected?.title || "", status: selected?.status || "" });
@@ -346,6 +403,25 @@ function DashboardHome({ data, actions, onNavigate }: DashboardHomeProps) {
           }}
           onDelete={() => {
             actions.deleteWork(workItem.id);
+            closeRecordDetail();
+          }}
+          onSkipRoutine={() => {
+            const reason = window.prompt("本次跳过原因，可留空。") || "";
+            actions.skipRoutineWorkAction(workItem.id, reason);
+            closeRecordDetail();
+          }}
+          onPostponeRoutine={(targetDate) => {
+            actions.postponeRoutineWorkAction(workItem.id, targetDate);
+            closeRecordDetail();
+          }}
+          onPauseRoutine={() => {
+            const ruleId = workItem.routineRuleId || workItem.sourceTemplateId;
+            if (!ruleId) return;
+            actions.pauseRoutineWorkAction(ruleId, "keep");
+            closeRecordDetail();
+          }}
+          onOpenRoutineRule={() => {
+            onNavigate("work");
             closeRecordDetail();
           }}
         />

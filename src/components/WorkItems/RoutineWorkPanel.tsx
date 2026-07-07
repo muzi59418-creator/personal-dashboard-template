@@ -16,8 +16,15 @@ interface RoutineWorkPanelProps {
   categories: Category[];
   projects: Project[];
   onCreate: (input: RoutineWorkTemplateInput) => void;
-  onUpdate: (id: string, input: RoutineWorkTemplateInput) => void;
-  onDelete: (id: string) => void;
+  onUpdate: (id: string, input: RoutineWorkTemplateInput, mode?: "future" | "sync_open") => void;
+  onDelete: (id: string, action?: "keep" | "skip" | "delete") => void;
+  onPause: (
+    id: string,
+    pendingTaskPolicy?: RoutineWorkTemplateInput["pendingTaskPolicy"],
+    pausedUntil?: string,
+    resumeStrategy?: RoutineWorkTemplateInput["resumeStrategy"],
+  ) => void;
+  onResume: (id: string, strategy?: RoutineWorkTemplateInput["resumeStrategy"]) => void;
   onGenerateToday: () => void;
 }
 
@@ -46,6 +53,8 @@ export function RoutineWorkPanel({
   onCreate,
   onUpdate,
   onDelete,
+  onPause,
+  onResume,
   onGenerateToday,
 }: RoutineWorkPanelProps) {
   const [expanded, setExpanded] = useState(false);
@@ -63,8 +72,26 @@ export function RoutineWorkPanel({
   }
 
   function deleteTemplate(template: RoutineWorkTemplate) {
-    if (!window.confirm("确认删除这个例行工作模板？已经生成的历史工作内容不会被删除。")) return;
-    onDelete(template.id);
+    if (!window.confirm("确认删除这个例行工作规则？未来不会再自动生成，已完成和已跳过历史会保留。")) return;
+    const choice = window.prompt("已生成但未完成任务如何处理？输入 1 保留为普通待办，2 标记为已跳过，3 一并删除。", "1");
+    const action = choice === "2" ? "skip" : choice === "3" ? "delete" : "keep";
+    onDelete(template.id, action);
+    setSelectedId("");
+  }
+
+  function pauseTemplate(template: RoutineWorkTemplate) {
+    const pausedUntil = window.prompt("暂停至指定日期可填写 YYYY-MM-DD；留空表示手动恢复。", template.pausedUntil || "") || "";
+    const pendingChoice = window.prompt("已生成但未完成任务如何处理？输入 1 保留待处理，2 标记为已跳过，3 顺延到恢复日。", "1");
+    const pendingTaskPolicy = pendingChoice === "2" ? "skip" : pendingChoice === "3" ? "postpone_to_resume" : "keep";
+    const resumeChoice = window.prompt("恢复方式：输入 1 恢复当天立即补生成，2 从下一个应执行日开始。", "1");
+    const resumeStrategy = resumeChoice === "2" ? "next_due" : "resume_today";
+    onPause(template.id, pendingTaskPolicy, pausedUntil, resumeStrategy);
+    setSelectedId("");
+  }
+
+  function resumeTemplate(template: RoutineWorkTemplate) {
+    const resumeChoice = window.prompt("恢复方式：输入 1 恢复当天立即补生成，2 从下一个应执行日开始。", template.resumeStrategy === "next_due" ? "2" : "1");
+    onResume(template.id, resumeChoice === "2" ? "next_due" : "resume_today");
     setSelectedId("");
   }
 
@@ -87,7 +114,7 @@ export function RoutineWorkPanel({
       {expanded && (
         <div className="routine-work-content">
           <button className="primary-button routine-generate-button" type="button" onClick={onGenerateToday}>
-            生成今日例行工作
+            立即检查 / 同步例行工作
           </button>
           {sortedTemplates.length === 0 ? (
             <div className="routine-empty">暂无例行工作模板</div>
@@ -100,7 +127,9 @@ export function RoutineWorkPanel({
                     <span className="routine-template-index">{index + 1}</span>
                     <strong>{template.name}</strong>
                     <span>{getFrequencyLabel(template)}</span>
-                    <span className={`routine-enabled-label ${template.enabled ? "enabled" : ""}`}>{template.enabled ? "已启用" : "已停用"}</span>
+                    <span className={`routine-enabled-label ${template.enabled && !template.paused ? "enabled" : ""}`}>
+                      {getRuleStateLabel(template)}
+                    </span>
                     {category && (
                       <span className="routine-category-dot" aria-label={category.name} style={{ background: category.color }} />
                     )}
@@ -134,7 +163,8 @@ export function RoutineWorkPanel({
             projects={projects}
             onCancel={() => setEditingId("")}
             onSubmit={(input) => {
-              onUpdate(editingTemplate.id, input);
+              const sync = window.confirm("是否同步更新已生成但未完成、未跳过且未手动顺延的任务？\n确定：同步未完成任务\n取消：仅更新未来自动生成规则");
+              onUpdate(editingTemplate.id, input, sync ? "sync_open" : "future");
               setEditingId("");
             }}
           />
@@ -147,6 +177,10 @@ export function RoutineWorkPanel({
             <DetailItem label="名称" value={selectedTemplate.name} />
             <DetailItem label="频率" value={getFrequencyLabel(selectedTemplate)} />
             <DetailItem label="默认状态" value={selectedTemplate.defaultStatus} />
+            <DetailItem label="规则状态" value={getRuleStateDescription(selectedTemplate)} />
+            <DetailItem label="生效日期" value={selectedTemplate.effectiveDate || "立即生效"} />
+            <DetailItem label="结束日期" value={selectedTemplate.endDate || "长期执行"} />
+            <DetailItem label="节假日处理" value={getHolidayPolicyLabel(selectedTemplate)} />
             <DetailItem label="分类" value={categoryMap.get(selectedTemplate.categoryId)?.name || "未设置"} />
             <DetailItem label="关联项目" value={projectMap.get(selectedTemplate.projectId) || "未关联"} />
             <DetailItem label="说明" value={selectedTemplate.description || "未填写"} wide />
@@ -164,6 +198,9 @@ export function RoutineWorkPanel({
               </button>
               <button className="secondary-button" type="button" onClick={() => toggleTemplateEnabled(selectedTemplate)}>
                 {selectedTemplate.enabled ? "停用" : "启用"}
+              </button>
+              <button className="secondary-button" type="button" onClick={() => (selectedTemplate.paused ? resumeTemplate(selectedTemplate) : pauseTemplate(selectedTemplate))}>
+                {selectedTemplate.paused ? "恢复" : "暂停"}
               </button>
               <button className="danger-button" type="button" onClick={() => deleteTemplate(selectedTemplate)}>
                 删除
@@ -195,6 +232,9 @@ function RoutineWorkForm({ template, categories, projects, onCancel, onSubmit }:
   const [customDate, setCustomDate] = useState(template?.customDate || "");
   const [defaultStatus, setDefaultStatus] = useState<WorkStatus>(template?.defaultStatus || "待处理");
   const [enabled, setEnabled] = useState(template?.enabled ?? true);
+  const [effectiveDate, setEffectiveDate] = useState(template?.effectiveDate || "");
+  const [endDate, setEndDate] = useState(template?.endDate || "");
+  const [dailyHolidayPolicy, setDailyHolidayPolicy] = useState(template?.dailyHolidayPolicy || "generate");
   const [error, setError] = useState("");
 
   function submit(event: React.FormEvent<HTMLFormElement>) {
@@ -218,6 +258,10 @@ function RoutineWorkForm({ template, categories, projects, onCancel, onSubmit }:
       setError("自定义重复时请选择执行日期。");
       return;
     }
+    if (effectiveDate && endDate && effectiveDate > endDate) {
+      setError("结束日期不能早于生效日期。");
+      return;
+    }
     onSubmit({
       name: name.trim(),
       description: description.trim(),
@@ -229,6 +273,15 @@ function RoutineWorkForm({ template, categories, projects, onCancel, onSubmit }:
       customDate: frequency === "custom" ? selectedCustomDate : "",
       defaultStatus,
       enabled,
+      effectiveDate,
+      endDate,
+      paused: template?.paused || false,
+      pausedUntil: template?.pausedUntil || "",
+      pauseResumeMode: template?.pauseResumeMode || "manual",
+      resumeStrategy: template?.resumeStrategy || "resume_today",
+      pendingTaskPolicy: template?.pendingTaskPolicy || "keep",
+      dailyHolidayPolicy: frequency === "daily" ? dailyHolidayPolicy : "postpone",
+      source: template?.source || "local",
     });
   }
 
@@ -291,6 +344,35 @@ function RoutineWorkForm({ template, categories, projects, onCancel, onSubmit }:
             ))}
           </select>
         </label>
+      </div>
+      <div className="form-grid">
+        <label>
+          生效日期
+          <input type="date" value={effectiveDate} onChange={(event) => setEffectiveDate(event.target.value)} />
+          <span className="field-hint">留空表示立即生效。</span>
+        </label>
+        <label>
+          结束日期
+          <input type="date" value={endDate} onChange={(event) => setEndDate(event.target.value)} />
+          <span className="field-hint">留空表示长期执行。</span>
+        </label>
+      </div>
+      {frequency === "daily" && (
+        <fieldset>
+          <legend>法定节假日处理</legend>
+          <div className="segmented-control">
+            <button className={dailyHolidayPolicy === "generate" ? "active" : ""} type="button" onClick={() => setDailyHolidayPolicy("generate")}>
+              假期仍生成
+            </button>
+            <button className={dailyHolidayPolicy === "postpone" ? "active" : ""} type="button" onClick={() => setDailyHolidayPolicy("postpone")}>
+              假期顺延
+            </button>
+          </div>
+          <span className="field-hint">“假期顺延”会把连续法定假期合并补到节后首个中国法定工作日。</span>
+        </fieldset>
+      )}
+      <div className="routine-rule-note">
+        {template?.paused ? `当前已暂停${template.pausedUntil ? `，暂停至 ${template.pausedUntil}` : "，需手动恢复"}` : "当前未暂停。"}
       </div>
       {frequency === "weekly" && (
         <fieldset>
@@ -376,16 +458,43 @@ function toTemplateInput(template: RoutineWorkTemplate): RoutineWorkTemplateInpu
     customDate: template.customDate,
     defaultStatus: template.defaultStatus,
     enabled: template.enabled,
+    effectiveDate: template.effectiveDate || "",
+    endDate: template.endDate || "",
+    paused: template.paused || false,
+    pausedUntil: template.pausedUntil || "",
+    pauseResumeMode: template.pauseResumeMode || "manual",
+    resumeStrategy: template.resumeStrategy || "resume_today",
+    pendingTaskPolicy: template.pendingTaskPolicy || "keep",
+    dailyHolidayPolicy: template.dailyHolidayPolicy || "generate",
+    source: template.source || "local",
   };
 }
 
 function getFrequencyLabel(template: RoutineWorkTemplate) {
   if (template.frequency === "daily") return "每天";
-  if (template.frequency === "workday") return "工作日";
+  if (template.frequency === "workday") return "中国法定工作日";
   if (template.frequency === "monthly") return template.monthlyDay ? `每月 ${template.monthlyDay} 日` : "每月";
   if (template.frequency === "custom") return template.customDate ? `自定义 · ${template.customDate}` : "自定义";
   const labels = template.weekdays.map((weekday) => weekdayOptions.find((option) => option.value === weekday)?.label).filter(Boolean);
   return labels.length > 0 ? `每周 ${labels.join("、")}` : "每周";
+}
+
+function getRuleStateLabel(template: RoutineWorkTemplate): string {
+  if (!template.enabled) return "已停用";
+  if (template.paused) return "已暂停";
+  return "已启用";
+}
+
+function getRuleStateDescription(template: RoutineWorkTemplate): string {
+  if (!template.enabled) return "已停用，不会继续自动生成。";
+  if (template.paused) return template.pausedUntil ? `暂停中，将在 ${template.pausedUntil} 自动恢复。` : "暂停中，需要手动恢复。";
+  return "已启用，按规则日期自动生成。";
+}
+
+function getHolidayPolicyLabel(template: RoutineWorkTemplate): string {
+  if (template.frequency === "daily") return template.dailyHolidayPolicy === "postpone" ? "法定节假日不生成，顺延至节后首个中国法定工作日" : "假期仍生成";
+  if (template.frequency === "workday") return "按中国法定工作日生成，法定节假日顺延";
+  return "原定触发日遇法定节假日时顺延";
 }
 
 function getTimeValue(value: string) {

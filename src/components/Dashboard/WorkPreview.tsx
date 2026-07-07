@@ -12,17 +12,19 @@ interface WorkPreviewProps {
   onOpenWork: (workId: string) => void;
   onOpenProject: (projectId: string) => void;
   onUpdateWork: (id: string, input: WorkItemInput) => void;
+  onSkipRoutineWork?: (id: string, reason?: string) => void;
+  onPostponeRoutineWork?: (id: string, targetDate: string) => void;
 }
 
-export function WorkPreview({ categories, items, projects, onOpenWork, onOpenProject, onUpdateWork }: WorkPreviewProps) {
+export function WorkPreview({ categories, items, projects, onOpenWork, onOpenProject, onUpdateWork, onSkipRoutineWork, onPostponeRoutineWork }: WorkPreviewProps) {
   const [showTodayAll, setShowTodayAll] = useState(false);
   const [completedExpanded, setCompletedExpanded] = useState(false);
   const categoryMap = new Map(categories.map((category) => [category.id, category]));
   const today = todayInputValue();
   const priorityItems = getPriorityItems(items, today);
   const visiblePriorityItems = priorityItems.slice(0, 3);
-  const todayRoutineItems = items.filter((item) => isRoutineWork(item) && item.date === today).sort(compareTodayWorkItems);
-  const pendingRoutineItems = todayRoutineItems.filter((item) => item.status !== "已完成");
+  const todayRoutineItems = dedupeRoutineItems(items.filter((item) => isRoutineWork(item) && item.date === today)).sort(compareTodayWorkItems);
+  const pendingRoutineItems = todayRoutineItems.filter((item) => item.status !== "已完成" && item.status !== "已跳过");
   const completedTodayItems = getCompletedTodayItems(items, today);
   const projectActions = getProjectActions(projects);
   const pendingCount = priorityItems.length + pendingRoutineItems.length;
@@ -66,6 +68,8 @@ export function WorkPreview({ categories, items, projects, onOpenWork, onOpenPro
                   categoryMap={categoryMap}
                   onOpenWork={onOpenWork}
                   onUpdateWork={onUpdateWork}
+                  onSkipRoutineWork={onSkipRoutineWork}
+                  onPostponeRoutineWork={onPostponeRoutineWork}
                 />
               ))}
             </div>
@@ -174,10 +178,13 @@ interface TodayWorkRowProps {
   categoryMap: Map<string, Category>;
   onOpenWork: (workId: string) => void;
   onUpdateWork: (id: string, input: WorkItemInput) => void;
+  onSkipRoutineWork?: (id: string, reason?: string) => void;
+  onPostponeRoutineWork?: (id: string, targetDate: string) => void;
 }
 
-function TodayWorkRow({ item, index, sourceLabel, categoryMap, onOpenWork, onUpdateWork }: TodayWorkRowProps) {
+function TodayWorkRow({ item, index, sourceLabel, categoryMap, onOpenWork, onUpdateWork, onSkipRoutineWork, onPostponeRoutineWork }: TodayWorkRowProps) {
   const category = categoryMap.get(item.categoryId);
+  const routine = isRoutineWork(item);
   return (
     <article
       className="today-work-row"
@@ -206,9 +213,22 @@ function TodayWorkRow({ item, index, sourceLabel, categoryMap, onOpenWork, onUpd
           )}
           <span>截止 {formatDate(item.date)}</span>
           {item.plannedDate && <span>计划 {formatDate(item.plannedDate)}</span>}
+          {routine && item.routineHolidayPostponed && <span>因节假日顺延</span>}
+          {routine && item.routineManualPostponed && <span>手动顺延</span>}
+          {routine && item.routineOriginalDate && item.routineOriginalDate !== item.date && <span>原定 {formatDate(item.routineOriginalDate)}</span>}
           <span>更新 {formatDateTime(item.updatedAt || item.createdAt)}</span>
         </div>
       </div>
+      {routine && (
+        <div className="today-routine-actions" onClick={(event) => event.stopPropagation()}>
+          <button className="text-button" type="button" onClick={() => onPostponeRoutineWork?.(item.id, getTomorrow(item.date))}>
+            明天
+          </button>
+          <button className="text-button" type="button" onClick={() => onSkipRoutineWork?.(item.id)}>
+            跳过
+          </button>
+        </div>
+      )}
       <WorkStatusSelect item={item} onUpdate={onUpdateWork} />
     </article>
   );
@@ -248,6 +268,22 @@ function getPriorityLabel(item: WorkItem, today: string): string {
 
 function isRoutineWork(item: WorkItem): boolean {
   return item.sourceTemplateType === "routine" || Boolean(item.sourceTemplateId && item.sourceTemplateType !== "work");
+}
+
+function dedupeRoutineItems(items: WorkItem[]): WorkItem[] {
+  const seen = new Set<string>();
+  return items.filter((item) => {
+    const key = `${item.routineRuleId || item.sourceTemplateId || item.id}:${item.date}`;
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
+}
+
+function getTomorrow(date: string): string {
+  const value = new Date(`${date}T00:00:00`);
+  value.setDate(value.getDate() + 1);
+  return `${value.getFullYear()}-${String(value.getMonth() + 1).padStart(2, "0")}-${String(value.getDate()).padStart(2, "0")}`;
 }
 
 function getCompletedTodayItems(items: WorkItem[], today: string): WorkItem[] {

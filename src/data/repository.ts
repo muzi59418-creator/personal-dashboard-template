@@ -20,6 +20,15 @@ import type {
 } from "../types/dashboard";
 import { createEmptyDashboardData, readDashboard, replaceDashboard, writeDashboard } from "./storage";
 import { todayInputValue } from "../utils/date";
+import { addDays, getChinaWorkdayCheck, getNextChinaWorkingDay } from "./chinaWorkCalendar";
+import {
+  createRoutineGenerationPlan,
+  getAutoRecoveredTemplate,
+  getRoutineRuleIdFromItem,
+  isOpenRoutineItem,
+  isRoutineItem,
+  mergeRoutineTrace,
+} from "./routineScheduler";
 
 // 当前实现基于 localStorage，后续可替换为 Supabase / Cloudflare D1 / Firebase。
 // 页面层只调用 repository，不直接读写 localStorage，方便未来迁移云端数据库和文件存储。
@@ -172,8 +181,17 @@ export function createRoutineWorkTemplate(input: RoutineWorkTemplateInput): Rout
 }
 
 export function updateRoutineWorkTemplate(id: string, input: RoutineWorkTemplateInput): RoutineWorkTemplate {
+  return updateRoutineWorkTemplateWithMode(id, input, "future");
+}
+
+export function updateRoutineWorkTemplateWithMode(
+  id: string,
+  input: RoutineWorkTemplateInput,
+  mode: "future" | "sync_open" = "future",
+): RoutineWorkTemplate {
   const data = readDashboard();
   let updated: RoutineWorkTemplate | undefined;
+  const now = new Date().toISOString();
   data.routineWorkTemplates = data.routineWorkTemplates.map((template) => {
     if (template.id !== id) return template;
     updated = {
@@ -184,59 +202,226 @@ export function updateRoutineWorkTemplate(id: string, input: RoutineWorkTemplate
       weekdays: normalizeTemplateWeekdays(input.weekdays),
       monthlyDay: normalizeTemplateMonthlyDay(input.monthlyDay),
       customDate: normalizeTemplateCustomDate(input.customDate),
-      updatedAt: new Date().toISOString(),
+      updatedAt: now,
     };
     return updated;
   });
   if (!updated) throw new Error("没有找到要编辑的例行工作。");
+  if (mode === "sync_open") {
+    data.workItems = data.workItems.map((item) => {
+      if (getRoutineRuleIdFromItem(item) !== id || !isOpenRoutineItem(item) || item.routineManualPostponed) return item;
+      return {
+        ...item,
+        title: updated?.name || item.title,
+        categoryId: updated?.categoryId || item.categoryId,
+        content: updated?.description || item.content,
+        projectId: updated?.projectId || "",
+        linkedProjectIds: updated?.projectId ? [updated.projectId] : [],
+        sourceTemplateName: updated?.name || item.sourceTemplateName,
+        status: updated?.defaultStatus || item.status,
+        updatedAt: now,
+      };
+    });
+  }
   save(data);
   return updated;
 }
 
-export function deleteRoutineWorkTemplate(id: string): void {
+export function pauseRoutineWorkTemplate(
+  id: string,
+  pendingTaskPolicy: RoutineWorkTemplate["pendingTaskPolicy"],
+  pausedUntil = "",
+  resumeStrategy: RoutineWorkTemplate["resumeStrategy"] = "resume_today",
+): RoutineWorkTemplate {
   const data = readDashboard();
+  const now = new Date().toISOString();
+  let updated: RoutineWorkTemplate | undefined;
+  data.routineWorkTemplates = data.routineWorkTemplates.map((template) => {
+    if (template.id !== id) return template;
+    updated = {
+      ...template,
+      paused: true,
+      pausedUntil: normalizeTemplateCustomDate(pausedUntil),
+      pauseResumeMode: pausedUntil ? "date" : "manual",
+      resumeStrategy,
+      pendingTaskPolicy,
+      updatedAt: now,
+    };
+    return updated;
+  });
+  if (!updated) throw new Error("没有找到要暂停的例行工作。");
+  data.workItems = data.workItems.flatMap((item) => {
+    if (getRoutineRuleIdFromItem(item) !== id || !isOpenRoutineItem(item)) return [item];
+    if (pendingTaskPolicy === "skip") {
+      return [{ ...item, status: "已跳过", routineSkipped: true, routineSkippedAt: todayInputValue(), updatedAt: now }];
+    }
+    if (pendingTaskPolicy === "postpone_to_resume" && pausedUntil) {
+      return [{ ...item, date: pausedUntil, plannedDate: pausedUntil, routineManualPostponed: true, routineActualDate: pausedUntil, updatedAt: now }];
+    }
+    return [item];
+  });
+  save(data);
+  return updated;
+}
+
+export function resumeRoutineWorkTemplate(id: string, strategy: RoutineWorkTemplate["resumeStrategy"] = "resume_today"): RoutineWorkTemplate {
+  const data = readDashboard();
+  let updated: RoutineWorkTemplate | undefined;
+  data.routineWorkTemplates = data.routineWorkTemplates.map((template) => {
+    if (template.id !== id) return template;
+    updated = { ...template, paused: false, pausedUntil: "", pauseResumeMode: "manual", resumeStrategy: strategy, updatedAt: new Date().toISOString() };
+    return updated;
+  });
+  if (!updated) throw new Error("没有找到要恢复的例行工作。");
+  save(data);
+  if (strategy === "resume_today") generateTodayRoutineWork(todayInputValue());
+  return updated;
+}
+
+export function deleteRoutineWorkTemplate(id: string, pendingAction: "keep" | "skip" | "delete" = "keep"): void {
+  const data = readDashboard();
+  const now = new Date().toISOString();
   data.routineWorkTemplates = data.routineWorkTemplates.filter((template) => template.id !== id);
+  data.workItems = data.workItems.flatMap((item) => {
+    if (getRoutineRuleIdFromItem(item) !== id || !isOpenRoutineItem(item)) return [item];
+    if (pendingAction === "delete") return [];
+    if (pendingAction === "skip") {
+      return [{ ...item, status: "已跳过", routineSkipped: true, routineSkippedAt: todayInputValue(), updatedAt: now }];
+    }
+    return [
+      {
+        ...item,
+        sourceTemplateId: undefined,
+        sourceTemplateType: undefined,
+        routineDetachedFromRuleId: id,
+        updatedAt: now,
+      },
+    ];
+  });
   save(data);
 }
 
 export function generateTodayRoutineWork(date = todayInputValue()): WorkItem[] {
+  return syncRoutineWorkForDate(date).created;
+}
+
+export function syncRoutineWorkForDate(date = todayInputValue()): { created: WorkItem[]; updated: WorkItem[]; warnings: string[] } {
   const data = readDashboard();
-  const dueTemplates = data.routineWorkTemplates.filter((template) => isTemplateDueToday(template, date));
-  const existingKeys = new Set(
-    data.workItems
-      .filter((item) => item.sourceTemplateId)
-      .map((item) => getRoutineScheduleKey(item.sourceTemplateId || "", item.date)),
-  );
+  data.routineWorkTemplates = data.routineWorkTemplates.map((template) => {
+    const recovered = getAutoRecoveredTemplate(template, date);
+    return recovered === template ? template : { ...recovered, updatedAt: new Date().toISOString() };
+  });
+  const plan = createRoutineGenerationPlan(data.routineWorkTemplates, date);
   const now = new Date().toISOString();
   const created: WorkItem[] = [];
+  const updated: WorkItem[] = [];
 
-  dueTemplates.forEach((template) => {
-    const scheduleKey = getRoutineScheduleKey(template.id, date);
-    if (existingKeys.has(scheduleKey)) return;
-    existingKeys.add(scheduleKey);
-    created.push({
+  plan.triggers.forEach((trigger) => {
+    const template = data.routineWorkTemplates.find((entry) => entry.id === trigger.ruleId);
+    if (!template) return;
+    const existing = data.workItems.find((item) => getRoutineRuleIdFromItem(item) === template.id && item.date === trigger.actualDate);
+    if (existing?.status === "已完成" || existing?.status === "已跳过" || existing?.routineSkipped) return;
+    if (existing) {
+      const merged = mergeRoutineTrace(existing, {
+        routineOriginalDate: trigger.originalDate,
+        routineHolidayPostponed: trigger.holidayPostponed,
+      });
+      data.workItems = data.workItems.map((item) => (item.id === existing.id ? { ...merged, updatedAt: now } : item));
+      updated.push({ ...merged, updatedAt: now });
+      return;
+    }
+    const item: WorkItem = {
       id: createId("work"),
       title: template.name,
       categoryId: template.categoryId,
       status: template.defaultStatus,
       content: template.description || `例行工作：${template.name}`,
-      date,
-      plannedDate: date,
+      date: trigger.actualDate,
+      plannedDate: trigger.actualDate,
       projectId: template.projectId,
       linkedProjectIds: template.projectId ? [template.projectId] : [],
       sourceTemplateId: template.id,
       sourceTemplateType: "routine",
       sourceTemplateName: template.name,
+      routineRuleId: template.id,
+      routineOriginalDate: trigger.originalDate,
+      routineActualDate: trigger.actualDate,
+      routineHolidayPostponed: trigger.holidayPostponed,
+      routineManualPostponed: false,
+      routineSkipped: false,
+      routineSkippedAt: "",
+      routineSkipReason: "",
+      routineMerged: false,
+      routineMergedTriggerDates: [trigger.originalDate],
       images: [],
       createdAt: now,
       updatedAt: now,
-    });
+    };
+    created.push(item);
   });
 
-  if (created.length === 0) return [];
-  data.workItems = [...created, ...data.workItems];
+  if (created.length > 0) data.workItems = [...created, ...data.workItems];
   save(data);
-  return created;
+  return { created, updated, warnings: plan.warnings };
+}
+
+export function skipRoutineWorkItem(id: string, reason = ""): WorkItem {
+  const data = readDashboard();
+  const now = new Date().toISOString();
+  let updated: WorkItem | undefined;
+  data.workItems = data.workItems.map((item) => {
+    if (item.id !== id) return item;
+    updated = {
+      ...item,
+      status: "已跳过",
+      routineSkipped: true,
+      routineSkippedAt: todayInputValue(),
+      routineSkipReason: reason.trim(),
+      updatedAt: now,
+    };
+    return updated;
+  });
+  if (!updated) throw new Error("没有找到要跳过的例行工作。");
+  save(data);
+  return updated;
+}
+
+export function postponeRoutineWorkItem(id: string, targetDate: string): WorkItem {
+  const data = readDashboard();
+  const source = data.workItems.find((item) => item.id === id);
+  if (!source) throw new Error("没有找到要顺延的例行工作。");
+  const ruleId = getRoutineRuleIdFromItem(source);
+  const now = new Date().toISOString();
+  const existing = data.workItems.find((item) => item.id !== id && getRoutineRuleIdFromItem(item) === ruleId && item.date === targetDate && isOpenRoutineItem(item));
+  if (existing) {
+    const merged = mergeRoutineTrace(existing, {
+      routineOriginalDate: source.routineOriginalDate || source.date,
+      routineHolidayPostponed: source.routineHolidayPostponed,
+      routineManualPostponed: true,
+    });
+    data.workItems = data.workItems
+      .filter((item) => item.id !== id)
+      .map((item) => (item.id === existing.id ? { ...merged, routineManualPostponed: true, updatedAt: now } : item));
+    save(data);
+    return { ...merged, routineManualPostponed: true, updatedAt: now };
+  }
+
+  let updated: WorkItem | undefined;
+  data.workItems = data.workItems.map((item) => {
+    if (item.id !== id) return item;
+    updated = {
+      ...item,
+      date: targetDate,
+      plannedDate: targetDate,
+      routineActualDate: targetDate,
+      routineManualPostponed: true,
+      updatedAt: now,
+    };
+    return updated;
+  });
+  if (!updated) throw new Error("没有找到要顺延的例行工作。");
+  save(data);
+  return updated;
 }
 
 export function createIdea(input: IdeaInput): Idea {

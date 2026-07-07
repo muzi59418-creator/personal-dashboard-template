@@ -38,9 +38,18 @@ interface WorkItemListProps {
   onDelete: (id: string) => void;
   onUpdateResponsibilities: (groups: WorkResponsibilityGroup[]) => void;
   onCreateRoutineWork: (input: RoutineWorkTemplateInput) => void;
-  onUpdateRoutineWork: (id: string, input: RoutineWorkTemplateInput) => void;
-  onDeleteRoutineWork: (id: string) => void;
+  onUpdateRoutineWork: (id: string, input: RoutineWorkTemplateInput, mode?: "future" | "sync_open") => void;
+  onDeleteRoutineWork: (id: string, action?: "keep" | "skip" | "delete") => void;
+  onPauseRoutineWork: (
+    id: string,
+    pendingTaskPolicy?: RoutineWorkTemplateInput["pendingTaskPolicy"],
+    pausedUntil?: string,
+    resumeStrategy?: RoutineWorkTemplateInput["resumeStrategy"],
+  ) => void;
+  onResumeRoutineWork: (id: string, strategy?: RoutineWorkTemplateInput["resumeStrategy"]) => void;
   onGenerateRoutineWork: () => void;
+  onSkipRoutineWorkItem: (id: string, reason?: string) => void;
+  onPostponeRoutineWorkItem: (id: string, targetDate: string) => void;
   onCreateWorkTemplate: (input: WorkTemplateInput) => void;
   onUpdateWorkTemplate: (id: string, input: WorkTemplateInput) => void;
   onDeleteWorkTemplate: (id: string) => void;
@@ -64,7 +73,11 @@ export function WorkItemList({
   onCreateRoutineWork,
   onUpdateRoutineWork,
   onDeleteRoutineWork,
+  onPauseRoutineWork,
+  onResumeRoutineWork,
   onGenerateRoutineWork,
+  onSkipRoutineWorkItem,
+  onPostponeRoutineWorkItem,
   onCreateWorkTemplate,
   onUpdateWorkTemplate,
   onDeleteWorkTemplate,
@@ -160,6 +173,8 @@ export function WorkItemList({
         onCreate={onCreateRoutineWork}
         onUpdate={onUpdateRoutineWork}
         onDelete={onDeleteRoutineWork}
+        onPause={onPauseRoutineWork}
+        onResume={onResumeRoutineWork}
         onGenerateToday={onGenerateRoutineWork}
       />
       <div className="toolbar work-filter-toolbar">
@@ -358,6 +373,30 @@ export function WorkItemList({
             onDelete(selectedItem.id);
             setSelectedItemId("");
             setEditingDetail(false);
+          }}
+          onSkipRoutine={() => {
+            const reason = window.prompt("本次跳过原因，可留空。") || "";
+            onSkipRoutineWorkItem(selectedItem.id, reason);
+            setSelectedItemId("");
+            setEditingDetail(false);
+          }}
+          onPostponeRoutine={(targetDate) => {
+            onPostponeRoutineWorkItem(selectedItem.id, targetDate);
+            setSelectedItemId("");
+            setEditingDetail(false);
+          }}
+          onPauseRoutine={() => {
+            const ruleId = selectedItem.routineRuleId || selectedItem.sourceTemplateId;
+            if (ruleId) onPauseRoutineWork(ruleId, "keep");
+            setSelectedItemId("");
+            setEditingDetail(false);
+          }}
+          onOpenRoutineRule={() => {
+            const ruleId = selectedItem.routineRuleId || selectedItem.sourceTemplateId;
+            if (ruleId) {
+              const rule = routineWorkTemplates.find((template) => template.id === ruleId);
+              if (rule) window.alert(`例行规则：${rule.name}\n可在上方“例行工作”中编辑该规则。`);
+            }
           }}
         />
       )}

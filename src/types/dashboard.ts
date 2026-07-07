@@ -1,4 +1,4 @@
-export type WorkStatus = "待处理" | "进行中" | "已完成" | "暂停";
+export type WorkStatus = "待处理" | "进行中" | "已完成" | "暂停" | "已跳过";
 export type IdeaType = "text" | "screenshot";
 export type IdeaStatus = "unorganized" | "organized" | "archived" | "converted";
 export type ProjectType = "work" | "personal";
@@ -7,6 +7,10 @@ export type ProjectQuadrant = "important_urgent" | "important_not_urgent" | "urg
 export type ProjectStepStatus = "todo" | "doing" | "done";
 export type ConvertedToType = "work" | "diary";
 export type RoutineWorkFrequency = "daily" | "workday" | "weekly" | "monthly" | "custom";
+export type RoutineDailyHolidayPolicy = "generate" | "postpone";
+export type RoutinePauseResumeMode = "manual" | "date";
+export type RoutineResumeStrategy = "resume_today" | "next_due";
+export type RoutinePendingTaskPolicy = "keep" | "skip" | "postpone_to_resume";
 export type WorkTemplateDateRule = "" | "today" | "tomorrow" | "next_workday" | "next_week";
 export type WorkSourceTemplateType = "routine" | "work";
 
@@ -44,6 +48,17 @@ export interface WorkItem {
   sourceTemplateId?: string;
   sourceTemplateType?: WorkSourceTemplateType;
   sourceTemplateName?: string;
+  routineRuleId?: string;
+  routineOriginalDate?: string;
+  routineActualDate?: string;
+  routineHolidayPostponed?: boolean;
+  routineManualPostponed?: boolean;
+  routineSkipped?: boolean;
+  routineSkippedAt?: string;
+  routineSkipReason?: string;
+  routineMerged?: boolean;
+  routineMergedTriggerDates?: string[];
+  routineDetachedFromRuleId?: string;
   images?: string[];
   completedAt?: string;
   createdAt: string;
@@ -95,6 +110,15 @@ export interface RoutineWorkTemplate {
   customDate: string;
   defaultStatus: WorkStatus;
   enabled: boolean;
+  effectiveDate?: string;
+  endDate?: string;
+  paused?: boolean;
+  pausedUntil?: string;
+  pauseResumeMode?: RoutinePauseResumeMode;
+  resumeStrategy?: RoutineResumeStrategy;
+  pendingTaskPolicy?: RoutinePendingTaskPolicy;
+  dailyHolidayPolicy?: RoutineDailyHolidayPolicy;
+  source?: string;
   createdAt: string;
   updatedAt: string;
 }
@@ -167,7 +191,7 @@ export type WorkResponsibilityGroupInput = WorkResponsibilityGroup;
 export type RoutineWorkTemplateInput = Omit<RoutineWorkTemplate, "id" | "createdAt" | "updatedAt">;
 export type WorkTemplateInput = Omit<WorkTemplate, "id" | "createdAt" | "updatedAt">;
 
-export const WORK_STATUSES: WorkStatus[] = ["待处理", "进行中", "已完成", "暂停"];
+export const WORK_STATUSES: WorkStatus[] = ["待处理", "进行中", "已完成", "暂停", "已跳过"];
 export const IDEA_STATUSES: IdeaStatus[] = ["unorganized", "organized", "archived", "converted"];
 export const PROJECT_STATUSES: ProjectStatus[] = ["未开始", "进行中", "暂停中", "待验收", "已完成", "长期维护"];
 export const PROJECT_QUADRANTS: ProjectQuadrant[] = [

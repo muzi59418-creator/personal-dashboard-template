@@ -12,6 +12,15 @@ export interface ChangelogEntry {
 export const changelogEntries: ChangelogEntry[] = [
   {
     date: "2026-07-07",
+    title: "v1.2.0 例行工作规则升级",
+    type: "功能优化",
+    modules: ["例行工作", "今日工作台", "JSON 导入导出", "localStorage"],
+    summary:
+      "例行工作新增生效日期、结束日期、暂停恢复、单次跳过和顺延操作；内置 2026 年中国法定工作日历，支持法定节假日顺延、连续假期合并补办和旧数据兼容迁移。",
+    status: "已推送",
+  },
+  {
+    date: "2026-07-07",
     title: "v1.1.0 今日工作台、计划执行日、工作模板",
     type: "新增",
     modules: ["首页", "工作内容", "工作模板", "JSON 导入导出"],

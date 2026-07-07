@@ -443,7 +443,7 @@ button.mobile-sidebar-toggle {
 
 .today-work-row {
   display: grid;
-  grid-template-columns: 28px minmax(0, 1fr) auto;
+  grid-template-columns: 28px minmax(0, 1fr) auto auto;
   align-items: center;
   gap: 12px;
   min-height: 58px;
@@ -453,6 +453,18 @@ button.mobile-sidebar-toggle {
   background: var(--surface-strong);
   cursor: pointer;
   transition: border-color 0.16s ease, background 0.16s ease, box-shadow 0.16s ease;
+}
+
+.today-routine-actions,
+.routine-instance-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+.today-routine-actions {
+  justify-content: flex-end;
 }
 
 .today-work-row:hover {
@@ -2536,6 +2548,16 @@ legend {
   color: var(--green) !important;
 }
 
+.routine-rule-note {
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: #f8fafc;
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 760;
+}
+
 .routine-category-dot {
   width: 10px;
   height: 10px;
@@ -3365,7 +3387,8 @@ legend {
     grid-template-columns: 24px minmax(0, 1fr);
   }
 
-  .today-work-row > .chip {
+  .today-work-row > .chip,
+  .today-routine-actions {
     grid-column: 2 / -1;
     justify-self: start;
   }
