@@ -84,7 +84,9 @@ export function WorkPreview({ categories, items, projects, onOpenWork, onOpenPro
             <span>{pendingRoutineItems.length} 条</span>
           </div>
           {pendingRoutineItems.length === 0 ? (
-            <EmptyState title="今日暂无待处理的例行工作" description="" />
+            <div className="compact-empty-state today-routine-empty">
+              <EmptyState title="今日暂无待处理的例行工作" description="" />
+            </div>
           ) : (
             <div className="today-work-list">
               {pendingRoutineItems.map((item, index) => (

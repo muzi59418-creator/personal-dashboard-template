@@ -264,12 +264,10 @@ export function ProjectDetailModal({
                           <article className="project-step-card project-step-card-detailed" key={step.id}>
                             <div className="project-step-card-head">
                               <span className="project-step-index">{index + 1}</span>
-                              <div>
+                              <div className="project-step-title-block">
                                 <strong>{step.name || "未命名推进事项"}</strong>
                                 <p>{step.description || "暂无事项说明。"}</p>
                               </div>
-                            </div>
-                            <div className="chip-row">
                               <label className="chip status quick-select-chip">
                                 <span className="sr-only">推进事项状态</span>
                                 <select value={step.status} onChange={(event) => updateStepStatus(step, event.target.value as ProjectStepStatus)}>
@@ -280,23 +278,27 @@ export function ProjectDetailModal({
                                   ))}
                                 </select>
                               </label>
-                              <span className="chip outline">{progressItemWorkCount > 0 ? `来源工作 ${progressItemWorkCount} 条` : "暂未来源工作"}</span>
+                            </div>
+                            <div className="project-step-card-foot">
+                              <div className="project-step-source">
+                                <span>{progressItemWorkCount > 0 ? `来源工作 ${progressItemWorkCount} 条` : "暂未来源工作"}</span>
                               {step.dueDate && <span className="chip outline">截止 {step.dueDate}</span>}
                               {step.completedAt && <span className="chip outline">完成 {step.completedAt}</span>}
-                            </div>
-                            <div className="project-step-actions">
-                              <button className="secondary-button compact-button" type="button" onClick={() => setCreateWorkInput(buildProgressItemWorkInput(project, step, categories[0]?.id || ""))}>
-                                <BriefcaseBusiness size={15} />
-                                创建工作
-                              </button>
-                              <button className="secondary-button compact-button" type="button" onClick={() => markStepDone(step)} disabled={step.status === "done"}>
-                                <CheckCircle2 size={15} />
-                                标记完成
-                              </button>
-                              <button className="secondary-button compact-button" type="button" onClick={onEdit}>
-                                <Edit3 size={15} />
-                                编辑
-                              </button>
+                              </div>
+                              <div className="project-step-actions">
+                                <button className="secondary-button compact-button" type="button" onClick={() => setCreateWorkInput(buildProgressItemWorkInput(project, step, categories[0]?.id || ""))}>
+                                  <BriefcaseBusiness size={15} />
+                                  创建工作
+                                </button>
+                                <button className="secondary-button compact-button" type="button" onClick={() => markStepDone(step)} disabled={step.status === "done"}>
+                                  <CheckCircle2 size={15} />
+                                  标记完成
+                                </button>
+                                <button className="secondary-button compact-button" type="button" onClick={onEdit}>
+                                  <Edit3 size={15} />
+                                  编辑
+                                </button>
+                              </div>
                             </div>
                           </article>
                         );

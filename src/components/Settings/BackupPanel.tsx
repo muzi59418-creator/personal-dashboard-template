@@ -97,21 +97,20 @@ export function BackupPanel({ data, onExport, onImport, onClear }: BackupPanelPr
         </article>
       </section>
       <section className="panel local-data-status-card">
-        <div className="section-head">
+        <div className="local-data-status-head">
           <h3>本地数据状态</h3>
+          <span className={`storage-status-pill ${dataStatus.risk.level}`} title={dataStatus.risk.message}>
+            状态：{dataStatus.risk.label}
+          </span>
         </div>
-        <div className="data-status-grid">
-          <DataStatusItem label="当前数据大小" value={dataStatus.formattedSize} />
-          <DataStatusItem label="图片附件" value={`${dataStatus.imageCount} 张`} />
-          <DataStatusItem label="工作内容" value={`${dataStatus.workItemCount} 条`} />
-          <DataStatusItem label="工作日记" value={`${dataStatus.diaryEntryCount} 篇`} />
-          <DataStatusItem label="临时想法 / 图文记录" value={`${dataStatus.ideaCount} 条`} />
+        <div className="data-status-inline" aria-label={dataStatus.risk.message}>
+          <DataStatusItem label="数据" value={dataStatus.formattedSize} />
+          <DataStatusItem label="图片" value={`${dataStatus.imageCount} 张`} />
+          <DataStatusItem label="工作" value={`${dataStatus.workItemCount} 条`} />
+          <DataStatusItem label="日记" value={`${dataStatus.diaryEntryCount} 篇`} />
+          <DataStatusItem label="灵感" value={`${dataStatus.ideaCount} 条`} />
           <DataStatusItem label="项目" value={`${dataStatus.projectCount} 个`} />
-          <DataStatusItem label="工作职责" value={`${dataStatus.workResponsibilityCount} 类`} />
-        </div>
-        <div className={`backup-advice ${dataStatus.risk.level}`}>
-          <strong>状态：{dataStatus.risk.label}</strong>
-          <span>{dataStatus.risk.message}</span>
+          <DataStatusItem label="职责" value={`${dataStatus.workResponsibilityCount} 类`} />
         </div>
       </section>
       <section className="panel">
@@ -155,9 +154,9 @@ export function BackupPanel({ data, onExport, onImport, onClear }: BackupPanelPr
 
 function DataStatusItem({ label, value }: { label: string; value: string }) {
   return (
-    <div className="data-status-item">
-      <span>{label}</span>
+    <span className="data-status-item">
       <strong>{value}</strong>
-    </div>
+      <span>{label}</span>
+    </span>
   );
 }

@@ -425,7 +425,7 @@ button.mobile-sidebar-toggle {
 .dashboard-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 14px;
+  gap: 12px 14px;
   align-items: stretch;
 }
 
@@ -434,7 +434,7 @@ button.mobile-sidebar-toggle {
 }
 
 .dashboard-equal-panel {
-  min-height: 380px;
+  min-height: 350px;
 }
 
 .today-work-panel,
@@ -588,6 +588,11 @@ button.mobile-sidebar-toggle {
   min-height: 56px;
   padding: 12px;
   background: var(--surface-strong);
+}
+
+.today-routine-empty .empty-state {
+  min-height: 44px;
+  padding: 9px 12px;
 }
 
 .project-action-list {
@@ -1777,23 +1782,74 @@ legend {
 
 .local-data-status-card {
   display: grid;
-  gap: 14px;
-}
-
-.data-status-grid {
-  display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 10px;
 }
 
+.local-data-status-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  min-width: 0;
+}
+
+.local-data-status-head h3 {
+  font-size: 17px;
+}
+
+.storage-status-pill {
+  flex: 0 0 auto;
+  min-height: 24px;
+  padding: 4px 9px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: #f8fafc;
+  color: #334155;
+  font-size: 12px;
+  font-weight: 850;
+  line-height: 1.2;
+}
+
+.storage-status-pill.normal {
+  border-color: #99f6e4;
+  background: #f0fdfa;
+  color: #0f766e;
+}
+
+.storage-status-pill.backup {
+  border-color: #fde68a;
+  background: #fffbeb;
+  color: #92400e;
+}
+
+.storage-status-pill.high {
+  border-color: #fecdd3;
+  background: #fff1f2;
+  color: #be123c;
+}
+
+.data-status-inline {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px 0;
+  min-width: 0;
+  color: #64748b;
+  font-size: 13px;
+}
+
 .data-status-item {
-  display: grid;
+  display: inline-flex;
+  align-items: baseline;
   gap: 4px;
   min-width: 0;
-  padding: 12px;
-  border: 1px solid var(--border);
-  border-radius: 8px;
-  background: var(--surface-strong);
+  white-space: nowrap;
+}
+
+.data-status-item:not(:last-child)::after {
+  margin: 0 9px;
+  color: #cbd5e1;
+  content: "|";
 }
 
 .data-status-item span {
@@ -1803,7 +1859,7 @@ legend {
 
 .data-status-item strong {
   color: var(--text);
-  font-size: 18px;
+  font-size: 14px;
 }
 
 .backup-advice {
@@ -3417,13 +3473,20 @@ legend {
 
 .project-step-card-head {
   display: grid;
-  grid-template-columns: 28px minmax(0, 1fr);
+  grid-template-columns: 28px minmax(0, 1fr) auto;
+  align-items: start;
   gap: 10px;
   min-width: 0;
 }
 
 .project-step-card-head strong {
   overflow-wrap: anywhere;
+}
+
+.project-step-title-block {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
 }
 
 .project-step-index {
@@ -3442,7 +3505,26 @@ legend {
 .project-step-actions {
   display: flex;
   flex-wrap: wrap;
+  justify-content: flex-end;
   gap: 8px;
+}
+
+.project-step-card-foot {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+}
+
+.project-step-source {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px;
+  min-width: 0;
+  color: #94a3b8;
+  font-size: 12px;
 }
 
 .sticky-form-actions {
@@ -3463,8 +3545,8 @@ legend {
 .project-step-editor,
 .project-step-card {
   display: grid;
-  gap: 10px;
-  padding: 12px;
+  gap: 9px;
+  padding: 11px 12px;
   border: 1px solid var(--border);
   border-radius: 8px;
   background: #fff;
@@ -3478,7 +3560,6 @@ legend {
 }
 
 .project-step-card p {
-  margin-top: 6px;
   color: #475569;
   line-height: 1.6;
 }
@@ -3876,6 +3957,23 @@ legend {
     padding: 14px 14px 84px;
   }
 
+  .project-step-card-head {
+    grid-template-columns: 24px minmax(0, 1fr);
+  }
+
+  .project-step-card-head > .quick-select-chip {
+    grid-column: 2 / -1;
+    justify-self: start;
+  }
+
+  .project-step-card-foot {
+    grid-template-columns: 1fr;
+  }
+
+  .project-step-actions {
+    justify-content: flex-start;
+  }
+
   .related-record-row {
     grid-template-columns: minmax(0, 1fr) auto;
   }
@@ -3987,6 +4085,11 @@ legend {
 
   .quick-capture-actions {
     align-items: center;
+  }
+
+  .local-data-status-head {
+    align-items: flex-start;
+    flex-wrap: wrap;
   }
 
   .stat-card {

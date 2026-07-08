@@ -58,7 +58,7 @@ function groupChangelogByDate() {
 }
 
 function getEntryVersion(title: string): string {
-  return title.match(/^v\d+\.\d+\.\d+/)?.[0] || "更新";
+  return title.match(/^v\d+\.\d+\.\d+/)?.[0] || "未标版本";
 }
 
 function getEntryTitle(title: string): string {
