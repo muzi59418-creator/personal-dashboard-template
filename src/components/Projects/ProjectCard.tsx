@@ -73,6 +73,7 @@ export function ProjectCard({ project, onOpen, sortIndex, totalCount, onMoveUp, 
             <span className="meta-separator">·</span>
             <span>更新 {formatDateTime(project.updatedAt)}</span>
           </div>
+          <p className="project-next-action-preview">下一步：{project.nextAction || "暂未设置"}</p>
         </div>
         <div className="project-compact-side">
           <span

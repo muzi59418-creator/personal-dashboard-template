@@ -11,6 +11,15 @@ export interface ChangelogEntry {
 
 export const changelogEntries: ChangelogEntry[] = [
   {
+    date: "2026-07-08",
+    title: "v1.3.4 项目管理详情与快捷编辑优化",
+    type: "功能优化",
+    modules: ["项目管理", "项目详情", "快捷编辑", "localStorage"],
+    summary:
+      "项目详情由居中弹窗改为右侧抽屉，项目推进清单前置展示，项目卡片新增下一步动作预览；项目详情内支持项目状态、四象限、下一步动作、当前进展、阻塞问题、风险备注、推进事项状态快捷编辑，不改变数据结构和本地存储口径。",
+    status: "待提交",
+  },
+  {
     date: "2026-07-07",
     title: "v1.3.0 项目推进清单与自动进度",
     type: "功能优化",
