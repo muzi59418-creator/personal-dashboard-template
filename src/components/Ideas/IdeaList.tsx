@@ -1,5 +1,4 @@
 import { useEffect, useMemo, useState } from "react";
-import { Plus } from "lucide-react";
 import type { Category, DiaryEntryInput, Idea, IdeaInput, Project, WorkItemInput } from "../../types/dashboard";
 import { formatDate, formatDateTime, formatWeekday } from "../../utils/date";
 import { EmptyState } from "../Common/EmptyState";
@@ -43,20 +42,14 @@ export function IdeaList({ ideas, projects, categories, onCreate, onUpdate, onDe
 
   return (
     <section className="page-section">
-      <div className="page-head">
-        <div>
-          <h2>灵感</h2>
-        </div>
-      </div>
       <div className="page-primary-action">
         <button className="primary-button" type="button" onClick={() => setCreating(true)}>
-          <Plus size={16} />
-          写想法
+          写灵感
         </button>
       </div>
 
       {groupedIdeas.length === 0 ? (
-        <EmptyState title="暂无灵感" description="点击写想法，保存文字、截图和图片附件。" />
+        <EmptyState title="暂无灵感" description="点击写灵感，保存文字、截图和图片附件。" />
       ) : (
         <div className="timeline-list">
           {groupedIdeas.map((group) => (
@@ -66,7 +59,7 @@ export function IdeaList({ ideas, projects, categories, onCreate, onUpdate, onDe
                 <div className="timeline-heading">
                   <h3>{formatDate(group.date)}</h3>
                   {group.date && <span>{formatWeekday(group.date)}</span>}
-                  <strong>{group.ideas.length} 条想法</strong>
+                  <strong>{group.ideas.length} 条灵感</strong>
                 </div>
                 <div className="timeline-card-list">
                   {group.ideas.map((idea) => (
@@ -88,7 +81,7 @@ export function IdeaList({ ideas, projects, categories, onCreate, onUpdate, onDe
       )}
 
       {creating && (
-        <Modal title="新增图文想法" onClose={() => setCreating(false)}>
+        <Modal title="新增图文灵感" onClose={() => setCreating(false)}>
           <IdeaForm
             projects={projects}
             onCancel={() => setCreating(false)}

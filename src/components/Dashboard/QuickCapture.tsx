@@ -155,7 +155,7 @@ export function QuickCapture({
         <div className="segmented-control">
           {(["idea", "diary", "work"] as CaptureType[]).map((value) => (
             <button key={value} className={type === value ? "active" : ""} type="button" onClick={() => setType(value)}>
-              {value === "idea" ? "想法" : value === "diary" ? "日记" : "工作"}
+              {value === "idea" ? "灵感" : value === "diary" ? "日记" : "工作"}
             </button>
           ))}
         </div>

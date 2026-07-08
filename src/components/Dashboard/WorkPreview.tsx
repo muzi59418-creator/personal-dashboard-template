@@ -1,9 +1,11 @@
 import { useState } from "react";
-import type { Category, Project, WorkItem, WorkItemInput } from "../../types/dashboard";
+import type { Category, Project, ProjectInput, ProjectStep, ProjectStepStatus, WorkItem, WorkItemInput } from "../../types/dashboard";
+import { PROJECT_STEP_STATUSES } from "../../types/dashboard";
 import { formatDate, formatDateTime, todayInputValue } from "../../utils/date";
 import { EmptyState } from "../Common/EmptyState";
 import { Modal } from "../Common/Modal";
 import { WorkStatusSelect } from "../WorkItems/WorkStatusSelect";
+import { getProjectStepStatusLabel } from "../Projects/ProjectForm";
 
 interface WorkPreviewProps {
   categories: Category[];
@@ -12,22 +14,22 @@ interface WorkPreviewProps {
   onOpenWork: (workId: string) => void;
   onOpenProject: (projectId: string) => void;
   onUpdateWork: (id: string, input: WorkItemInput) => void;
+  onUpdateProject: (id: string, input: ProjectInput) => void;
   onSkipRoutineWork?: (id: string, reason?: string) => void;
   onPostponeRoutineWork?: (id: string, targetDate: string) => void;
 }
 
-export function WorkPreview({ categories, items, projects, onOpenWork, onOpenProject, onUpdateWork, onSkipRoutineWork, onPostponeRoutineWork }: WorkPreviewProps) {
+export function WorkPreview({ categories, items, projects, onOpenWork, onOpenProject, onUpdateWork, onUpdateProject, onSkipRoutineWork, onPostponeRoutineWork }: WorkPreviewProps) {
   const [showTodayAll, setShowTodayAll] = useState(false);
-  const [completedExpanded, setCompletedExpanded] = useState(false);
+  const [showCompletedToday, setShowCompletedToday] = useState(false);
   const categoryMap = new Map(categories.map((category) => [category.id, category]));
   const today = todayInputValue();
   const priorityItems = getPriorityItems(items, today);
   const visiblePriorityItems = priorityItems.slice(0, 3);
   const todayRoutineItems = dedupeRoutineItems(items.filter((item) => isRoutineWork(item) && item.date === today)).sort(compareTodayWorkItems);
-  const pendingRoutineItems = todayRoutineItems.filter((item) => item.status !== "已完成" && item.status !== "已跳过");
+  const pendingRoutineItems = todayRoutineItems.filter((item) => isActionableStatus(item) && !item.routineSkipped);
   const completedTodayItems = getCompletedTodayItems(items, today);
-  const projectActions = getProjectActions(projects);
-  const pendingCount = priorityItems.length + pendingRoutineItems.length;
+  const projectActions = getProjectActions(projects, today);
 
   return (
     <>
@@ -36,19 +38,17 @@ export function WorkPreview({ categories, items, projects, onOpenWork, onOpenPro
           <div>
             <h2>今日工作台</h2>
           </div>
-          {priorityItems.length > 3 && (
-            <button className="text-button" type="button" onClick={() => setShowTodayAll(true)}>
-              查看全部
+          <div className="section-head-actions">
+            <button className="text-button today-completed-link" type="button" onClick={() => setShowCompletedToday(true)}>
+              今日已完成 {completedTodayItems.length} 条
             </button>
-          )}
-        </div>
-
-        {pendingCount === 0 && (
-          <div className="today-clear-banner">
-            <strong>今天的待办已清空</strong>
-            <span>今日已完成 {completedTodayItems.length} 条</span>
+            {priorityItems.length > 3 && (
+              <button className="text-button" type="button" onClick={() => setShowTodayAll(true)}>
+                查看全部
+              </button>
+            )}
           </div>
-        )}
+        </div>
 
         <div className="today-workbench-section">
           <div className="today-workbench-title">
@@ -56,7 +56,9 @@ export function WorkPreview({ categories, items, projects, onOpenWork, onOpenPro
             <span>最多显示 3 条</span>
           </div>
           {visiblePriorityItems.length === 0 ? (
-            <EmptyState title="暂无优先处理事项" description="" />
+            <div className="compact-empty-state">
+              <EmptyState title="暂无优先处理事项" description="" />
+            </div>
           ) : (
             <div className="today-work-list">
               {visiblePriorityItems.map((item, index) => (
@@ -79,21 +81,23 @@ export function WorkPreview({ categories, items, projects, onOpenWork, onOpenPro
         <div className="today-workbench-section">
           <div className="today-workbench-title">
             <h3>今日例行</h3>
-            <span>{todayRoutineItems.length} 条</span>
+            <span>{pendingRoutineItems.length} 条</span>
           </div>
-          {todayRoutineItems.length === 0 ? (
-            <EmptyState title="今日暂无自动生成的例行工作" description="" />
+          {pendingRoutineItems.length === 0 ? (
+            <EmptyState title="今日暂无待处理的例行工作" description="" />
           ) : (
             <div className="today-work-list">
-              {todayRoutineItems.map((item, index) => (
+              {pendingRoutineItems.map((item, index) => (
                 <TodayWorkRow
                   key={item.id}
                   item={item}
                   index={index}
-                  sourceLabel="今日例行"
+                  sourceLabel=""
                   categoryMap={categoryMap}
                   onOpenWork={onOpenWork}
                   onUpdateWork={onUpdateWork}
+                  onSkipRoutineWork={onSkipRoutineWork}
+                  onPostponeRoutineWork={onPostponeRoutineWork}
                 />
               ))}
             </div>
@@ -106,42 +110,21 @@ export function WorkPreview({ categories, items, projects, onOpenWork, onOpenPro
             <span>{projectActions.length} 个</span>
           </div>
           {projectActions.length === 0 ? (
-            <EmptyState title="暂无项目下一步动作" description="" />
+            <div className="compact-empty-state">
+              <EmptyState title="今天暂无待推进事项" description="" />
+            </div>
           ) : (
             <div className="project-action-list">
-              {projectActions.map((project) => (
-                <button className="project-action-row" type="button" key={project.id} onClick={() => onOpenProject(project.id)}>
-                  <strong>{project.name}</strong>
-                  <span>{getProjectNextAction(project)}</span>
-                </button>
+              {projectActions.map((action, index) => (
+                <ProjectActionRow
+                  key={`${action.projectId}-${action.itemId}`}
+                  action={action}
+                  index={index}
+                  onOpenProject={onOpenProject}
+                  onUpdateProject={onUpdateProject}
+                />
               ))}
             </div>
-          )}
-        </div>
-
-        <div className="today-workbench-section">
-          <button className="today-completed-toggle" type="button" onClick={() => setCompletedExpanded((current) => !current)}>
-            <span>今日已完成</span>
-            <strong>{completedTodayItems.length} 条</strong>
-          </button>
-          {completedExpanded && (
-            completedTodayItems.length === 0 ? (
-              <EmptyState title="今天还没有完成记录" description="" />
-            ) : (
-              <div className="today-work-list">
-                {completedTodayItems.map((item, index) => (
-                  <TodayWorkRow
-                    key={item.id}
-                    item={item}
-                    index={index}
-                    sourceLabel="已完成"
-                    categoryMap={categoryMap}
-                    onOpenWork={onOpenWork}
-                    onUpdateWork={onUpdateWork}
-                  />
-                ))}
-              </div>
-            )
           )}
         </div>
       </section>
@@ -162,6 +145,24 @@ export function WorkPreview({ categories, items, projects, onOpenWork, onOpenPro
                   </div>
                   <WorkStatusSelect item={item} onUpdate={onUpdateWork} />
                 </div>
+              ))}
+            </div>
+          )}
+        </Modal>
+      )}
+      {showCompletedToday && (
+        <Modal title={`今日已完成 ${completedTodayItems.length} 条`} onClose={() => setShowCompletedToday(false)}>
+          {completedTodayItems.length === 0 ? (
+            <EmptyState title="今天还没有完成记录" description="" />
+          ) : (
+            <div className="today-completed-modal-list">
+              {completedTodayItems.map((item) => (
+                <article className="today-completed-modal-row" key={item.id}>
+                  <div>
+                    <strong>{getCompletedDisplayTitle(item, categoryMap)}</strong>
+                  </div>
+                  <time>{formatDateTime(item.completedAt || item.updatedAt)}</time>
+                </article>
               ))}
             </div>
           )}
@@ -202,34 +203,98 @@ function TodayWorkRow({ item, index, sourceLabel, categoryMap, onOpenWork, onUpd
         {index + 1}
       </span>
       <div className="today-work-main">
-        <strong>{item.title}</strong>
-        <div className="today-work-meta">
-          <span className="chip outline">{sourceLabel}</span>
-          {category && (
-            <span>
-              <span className="mini-dot" style={{ background: category.color }} />
-              {category.name}
-            </span>
-          )}
-          <span>截止 {formatDate(item.date)}</span>
-          {item.plannedDate && <span>计划 {formatDate(item.plannedDate)}</span>}
-          {routine && item.routineHolidayPostponed && <span>因节假日顺延</span>}
-          {routine && item.routineManualPostponed && <span>手动顺延</span>}
-          {routine && item.routineOriginalDate && item.routineOriginalDate !== item.date && <span>原定 {formatDate(item.routineOriginalDate)}</span>}
-          <span>更新 {formatDateTime(item.updatedAt || item.createdAt)}</span>
+        <div className="today-work-title-line">
+          <strong>{item.title}</strong>
+          <span className="today-work-due">截止 {formatDate(item.date)}</span>
+          {sourceLabel && <span className="today-work-source">{sourceLabel}</span>}
+          {!sourceLabel && category && <span className="today-work-source">{category.name}</span>}
         </div>
       </div>
-      {routine && (
-        <div className="today-routine-actions" onClick={(event) => event.stopPropagation()}>
-          <button className="text-button" type="button" onClick={() => onPostponeRoutineWork?.(item.id, getTomorrow(item.date))}>
-            明天
-          </button>
-          <button className="text-button" type="button" onClick={() => onSkipRoutineWork?.(item.id)}>
-            跳过
-          </button>
+      <WorkStatusSelect
+        item={item}
+        onUpdate={onUpdateWork}
+        onSkipRoutineWork={routine ? onSkipRoutineWork : undefined}
+        onPostponeRoutineWork={routine ? onPostponeRoutineWork : undefined}
+      />
+    </article>
+  );
+}
+
+interface ProjectAction {
+  project: Project;
+  projectId: string;
+  itemId: string;
+  name: string;
+  dueDate: string;
+  status: ProjectStepStatus;
+}
+
+function ProjectActionRow({
+  action,
+  index,
+  onOpenProject,
+  onUpdateProject,
+}: {
+  action: ProjectAction;
+  index: number;
+  onOpenProject: (projectId: string) => void;
+  onUpdateProject: (id: string, input: ProjectInput) => void;
+}) {
+  function updateProjectStepStatus(status: ProjectStepStatus) {
+    if (status === action.status) return;
+    onUpdateProject(action.projectId, {
+      ...toProjectInput(action.project),
+      executionSteps: (action.project.executionSteps || []).map((step) =>
+        step.id === action.itemId
+          ? {
+              ...step,
+              status,
+              completedAt: status === "done" ? step.completedAt || todayInputValue() : "",
+            }
+          : step,
+      ),
+    });
+  }
+
+  return (
+    <article
+      className="today-work-row project-action-row"
+      role="button"
+      tabIndex={0}
+      onClick={() => onOpenProject(action.projectId)}
+      onKeyDown={(event) => {
+        if (event.key === "Enter" || event.key === " ") {
+          event.preventDefault();
+          onOpenProject(action.projectId);
+        }
+      }}
+    >
+      <span className="today-work-index" aria-hidden="true">
+        {index + 1}
+      </span>
+      <div className="today-work-main">
+        <div className="today-work-title-line">
+          <strong>{action.name}</strong>
+          <span className="today-work-due">截止 {formatDate(action.dueDate)}</span>
         </div>
-      )}
-      <WorkStatusSelect item={item} onUpdate={onUpdateWork} />
+      </div>
+      <label
+        className="chip status quick-select-chip"
+        onClick={(event) => event.stopPropagation()}
+        onKeyDown={(event) => event.stopPropagation()}
+        onMouseDown={(event) => event.stopPropagation()}
+        onPointerDown={(event) => event.stopPropagation()}
+        onTouchStart={(event) => event.stopPropagation()}
+      >
+        <span className="sr-only">推进事项状态</span>
+        <select value={action.status} onChange={(event) => updateProjectStepStatus(event.target.value as ProjectStepStatus)}>
+          {PROJECT_STEP_STATUSES.map((status) => (
+            <option key={status} value={status}>
+              {getProjectStepStatusLabel(status)}
+            </option>
+          ))}
+        </select>
+      </label>
     </article>
   );
 }
@@ -243,7 +308,7 @@ function compareTodayWorkItems(a: WorkItem, b: WorkItem): number {
 function getPriorityItems(items: WorkItem[], today: string): WorkItem[] {
   const seen = new Set<string>();
   return items
-    .filter((item) => !isRoutineWork(item) && item.status !== "已完成")
+    .filter((item) => !isRoutineWork(item) && isActionableStatus(item))
     .filter((item) => item.date < today || item.date === today || item.plannedDate === today)
     .sort((a, b) => getPriorityRank(a, today) - getPriorityRank(b, today) || compareTodayWorkItems(a, b))
     .filter((item) => {
@@ -280,10 +345,8 @@ function dedupeRoutineItems(items: WorkItem[]): WorkItem[] {
   });
 }
 
-function getTomorrow(date: string): string {
-  const value = new Date(`${date}T00:00:00`);
-  value.setDate(value.getDate() + 1);
-  return `${value.getFullYear()}-${String(value.getMonth() + 1).padStart(2, "0")}-${String(value.getDate()).padStart(2, "0")}`;
+function isActionableStatus(item: WorkItem): boolean {
+  return item.status === "待处理" || item.status === "进行中";
 }
 
 function getCompletedTodayItems(items: WorkItem[], today: string): WorkItem[] {
@@ -300,15 +363,50 @@ function getLocalDatePart(value: string | undefined): string {
   return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
 }
 
-function getProjectActions(projects: Project[]): Project[] {
+function getProjectActions(projects: Project[], today: string): ProjectAction[] {
   return projects
-    .filter((project) => project.status === "进行中")
-    .filter((project) => Boolean(getProjectNextAction(project)))
-    .sort((a, b) => (b.updatedAt || "").localeCompare(a.updatedAt || "") || a.id.localeCompare(b.id))
-    .slice(0, 4);
+    .flatMap((project) =>
+      (project.executionSteps || [])
+        .filter((step) => step.status !== "done")
+        .filter((step) => getProjectStepPlanDate(step) === today)
+        .map((step) => ({
+          project,
+          projectId: project.id,
+          itemId: step.id,
+          name: step.name || "未命名推进事项",
+          dueDate: getProjectStepPlanDate(step),
+          status: step.status,
+        })),
+    )
+    .sort((a, b) => a.name.localeCompare(b.name, "zh-CN"))
+    .slice(0, 6);
 }
 
-function getProjectNextAction(project: Project): string {
-  const activeStep = project.executionSteps?.find((step) => step.status !== "done");
-  return project.nextAction || activeStep?.name || "";
+function getProjectStepPlanDate(step: ProjectStep): string {
+  const value = step as typeof step & {
+    plannedDate?: string;
+    planDate?: string;
+    scheduledDate?: string;
+    executionDate?: string;
+    date?: string;
+  };
+  return value.plannedDate || value.planDate || value.scheduledDate || value.executionDate || value.date || value.dueDate || "";
+}
+
+function getCompletedTypeLabel(item: WorkItem, categoryMap: Map<string, Category>): string {
+  if (isRoutineWork(item)) return item.sourceTemplateName ? `例行工作 / ${item.sourceTemplateName}` : "例行工作";
+  const category = categoryMap.get(item.categoryId);
+  if (item.sourceProjectType === "progressItem") return "项目推进";
+  return category?.name || "工作内容";
+}
+
+function getCompletedDisplayTitle(item: WorkItem, categoryMap: Map<string, Category>): string {
+  const sourceLabel = getCompletedTypeLabel(item, categoryMap);
+  if (sourceLabel.includes(" / ")) return sourceLabel;
+  return `${sourceLabel} / ${item.title}`;
+}
+
+function toProjectInput(project: Project): ProjectInput {
+  const { id: _id, createdAt: _createdAt, updatedAt: _updatedAt, ...input } = project;
+  return input;
 }

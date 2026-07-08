@@ -5,12 +5,30 @@ import { WORK_STATUSES } from "../../types/dashboard";
 interface WorkStatusSelectProps {
   item: WorkItem;
   onUpdate: (id: string, input: WorkItemInput) => void;
+  onSkipRoutineWork?: (id: string, reason?: string) => void;
+  onPostponeRoutineWork?: (id: string, targetDate: string) => void;
 }
 
-export function WorkStatusSelect({ item, onUpdate }: WorkStatusSelectProps) {
+type StatusSelectValue = WorkStatus | "postpone_tomorrow";
+
+export function WorkStatusSelect({ item, onUpdate, onSkipRoutineWork, onPostponeRoutineWork }: WorkStatusSelectProps) {
+  const canUseRoutineActions = Boolean(onSkipRoutineWork || onPostponeRoutineWork);
+
   function updateStatus(status: WorkStatus) {
     if (status === item.status) return;
+    if (status === "已跳过" && onSkipRoutineWork) {
+      onSkipRoutineWork(item.id);
+      return;
+    }
     onUpdate(item.id, toWorkItemInput(item, status));
+  }
+
+  function handleChange(value: StatusSelectValue) {
+    if (value === "postpone_tomorrow") {
+      onPostponeRoutineWork?.(item.id, getTomorrow(item.date));
+      return;
+    }
+    updateStatus(value);
   }
 
   return (
@@ -30,18 +48,31 @@ export function WorkStatusSelect({ item, onUpdate }: WorkStatusSelectProps) {
         onKeyDown={(event) => event.stopPropagation()}
         onChange={(event) => {
           event.stopPropagation();
-          updateStatus(event.target.value as WorkStatus);
+          handleChange(event.target.value as StatusSelectValue);
         }}
       >
-        {WORK_STATUSES.map((status) => (
-          <option key={status} value={status}>
-            {status}
-          </option>
-        ))}
+        <optgroup label="状态">
+          {WORK_STATUSES.map((status) => (
+            <option key={status} value={status}>
+              {status}
+            </option>
+          ))}
+        </optgroup>
+        {canUseRoutineActions && (
+          <optgroup label="快捷操作">
+            {onPostponeRoutineWork && <option value="postpone_tomorrow">延后到明天</option>}
+          </optgroup>
+        )}
       </select>
       <ChevronDown size={14} aria-hidden="true" />
     </span>
   );
+}
+
+function getTomorrow(date: string): string {
+  const value = new Date(`${date}T00:00:00`);
+  value.setDate(value.getDate() + 1);
+  return `${value.getFullYear()}-${String(value.getMonth() + 1).padStart(2, "0")}-${String(value.getDate()).padStart(2, "0")}`;
 }
 
 function toWorkItemInput(item: WorkItem, status: WorkStatus): WorkItemInput {

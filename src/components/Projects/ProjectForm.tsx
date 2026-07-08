@@ -10,6 +10,7 @@ interface ProjectFormProps {
   project?: Project;
   onCancel: () => void;
   onSubmit: (input: ProjectInput) => void;
+  initialBlankStep?: boolean;
 }
 
 const quadrantLabels: Record<ProjectQuadrant, string> = {
@@ -25,7 +26,7 @@ const stepStatusLabels: Record<ProjectStepStatus, string> = {
   done: "已完成",
 };
 
-export function ProjectForm({ project, onCancel, onSubmit }: ProjectFormProps) {
+export function ProjectForm({ project, onCancel, onSubmit, initialBlankStep = false }: ProjectFormProps) {
   const [name, setName] = useState(project?.name || "");
   const [type, setType] = useState<ProjectType>(project?.type || "work");
   const [status, setStatus] = useState<ProjectStatus>(project?.status || "未开始");
@@ -36,7 +37,10 @@ export function ProjectForm({ project, onCancel, onSubmit }: ProjectFormProps) {
   const [purpose, setPurpose] = useState(project?.purpose || "");
   const [expectedResult, setExpectedResult] = useState(project?.expectedResult || "");
   const [acceptanceCriteria, setAcceptanceCriteria] = useState(project?.acceptanceCriteria || "");
-  const [executionSteps, setExecutionSteps] = useState<ProjectStep[]>(project?.executionSteps || []);
+  const [executionSteps, setExecutionSteps] = useState<ProjectStep[]>(() => {
+    const currentSteps = project?.executionSteps || [];
+    return initialBlankStep ? [...currentSteps, createBlankStep()] : currentSteps;
+  });
   const [currentProgress, setCurrentProgress] = useState(project?.currentProgress || project?.content || "");
   const [nextAction, setNextAction] = useState(project?.nextAction || "");
   const [blockers, setBlockers] = useState(project?.blockers || "");
@@ -79,10 +83,7 @@ export function ProjectForm({ project, onCancel, onSubmit }: ProjectFormProps) {
   }
 
   function addStep() {
-    setExecutionSteps((current) => [
-      ...current,
-      { id: createId("step"), name: "", description: "", status: "todo", dueDate: "", completedAt: "" },
-    ]);
+    setExecutionSteps((current) => [...current, createBlankStep()]);
   }
 
   function updateStep(stepId: string, patch: Partial<ProjectStep>) {
@@ -267,6 +268,10 @@ export function ProjectForm({ project, onCancel, onSubmit }: ProjectFormProps) {
       </div>
     </form>
   );
+}
+
+function createBlankStep(): ProjectStep {
+  return { id: createId("step"), name: "", description: "", status: "todo", dueDate: "", completedAt: "" };
 }
 
 function ProjectFormSection({ title, children }: { title: string; children: React.ReactNode }) {

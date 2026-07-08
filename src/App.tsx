@@ -395,6 +395,7 @@ function DashboardHome({ data, actions, onNavigate }: DashboardHomeProps) {
           items={data.workItems}
           projects={data.projects}
           onUpdateWork={actions.updateWork}
+          onUpdateProject={actions.updateProjectAction}
           onSkipRoutineWork={actions.skipRoutineWorkAction}
           onPostponeRoutineWork={actions.postponeRoutineWorkAction}
           onOpenWork={(workId) => {

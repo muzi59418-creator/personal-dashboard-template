@@ -57,6 +57,7 @@ export function ProjectDetailModal({
   onOpenLinkedRecord,
 }: ProjectDetailModalProps) {
   const [createWorkInput, setCreateWorkInput] = useState<Partial<WorkItemInput> | null>(null);
+  const [startWithNewProgressItem, setStartWithNewProgressItem] = useState(false);
   const [editingTextField, setEditingTextField] = useState<EditableProjectTextField | null>(null);
   const [textDraft, setTextDraft] = useState("");
   const progressSummary = getProjectProgressSummary(project);
@@ -152,6 +153,11 @@ export function ProjectDetailModal({
     cancelTextEdit();
   }
 
+  function startAddingProgressItem() {
+    setStartWithNewProgressItem(true);
+    onEdit();
+  }
+
   return (
     <>
       <div className="project-drawer-backdrop" role="presentation" onMouseDown={closeFromBackdrop}>
@@ -196,10 +202,21 @@ export function ProjectDetailModal({
 
           <div className="project-drawer-body">
             {editing ? (
-              <ProjectForm project={project} onCancel={onCancelEdit} onSubmit={onUpdate} />
+              <ProjectForm
+                project={project}
+                initialBlankStep={startWithNewProgressItem}
+                onCancel={() => {
+                  setStartWithNewProgressItem(false);
+                  onCancelEdit();
+                }}
+                onSubmit={(input) => {
+                  setStartWithNewProgressItem(false);
+                  onUpdate(input);
+                }}
+              />
             ) : (
               <div className="detail-stack project-detail">
-                <ProjectDetailSection title="项目概览" defaultOpen>
+                <ProjectDetailSection title="项目概览">
                   <div className="detail-meta-grid project-overview-meta-grid">
                     <DetailMeta label="项目类型" value={project.type === "work" ? "工作项目" : "个人项目"} />
                     <DetailSelect
@@ -229,7 +246,16 @@ export function ProjectDetailModal({
                   </div>
                 </ProjectDetailSection>
 
-                <ProjectDetailSection title="项目推进清单" defaultOpen emphasized>
+                <ProjectDetailSection
+                  title="项目推进清单"
+                  defaultOpen
+                  emphasized
+                  action={
+                    <button className="secondary-button compact-button" type="button" onClick={startAddingProgressItem}>
+                      新增事项
+                    </button>
+                  }
+                >
                   {project.executionSteps?.length ? (
                     <div className="project-step-list">
                       {project.executionSteps.map((step, index) => {
@@ -277,7 +303,12 @@ export function ProjectDetailModal({
                       })}
                     </div>
                   ) : (
-                    <p className="muted-text">暂未拆分推进事项。</p>
+                    <div className="project-step-empty">
+                      <p className="muted-text">暂未拆分推进事项。</p>
+                      <button className="secondary-button compact-button" type="button" onClick={startAddingProgressItem}>
+                        新增推进事项
+                      </button>
+                    </div>
                   )}
                 </ProjectDetailSection>
 
@@ -437,11 +468,28 @@ function DetailSelect<TValue extends string>({
   );
 }
 
-function ProjectDetailSection({ title, children, defaultOpen = false, emphasized = false }: { title: string; children: ReactNode; defaultOpen?: boolean; emphasized?: boolean }) {
+function ProjectDetailSection({
+  title,
+  children,
+  defaultOpen = false,
+  emphasized = false,
+  action,
+}: {
+  title: string;
+  children: ReactNode;
+  defaultOpen?: boolean;
+  emphasized?: boolean;
+  action?: ReactNode;
+}) {
   return (
     <details className={`project-detail-section project-detail-disclosure${emphasized ? " project-detail-section-core" : ""}`} open={defaultOpen}>
       <summary>
         <span>{title}</span>
+        {action && (
+          <span className="project-detail-summary-action" onClick={(event) => event.stopPropagation()} onKeyDown={(event) => event.stopPropagation()}>
+            {action}
+          </span>
+        )}
       </summary>
       <div className="project-detail-section-body">{children}</div>
     </details>
