@@ -2,6 +2,7 @@ import { Plus, Trash2 } from "lucide-react";
 import { useState } from "react";
 import type { Project, ProjectInput, ProjectQuadrant, ProjectStatus, ProjectStep, ProjectStepStatus, ProjectType } from "../../types/dashboard";
 import { PROJECT_QUADRANTS, PROJECT_STATUSES, PROJECT_STEP_STATUSES } from "../../types/dashboard";
+import { todayInputValue } from "../../utils/date";
 import { createId } from "../../utils/id";
 import { getProjectProgressSummary } from "../../utils/projectProgress";
 import { DateInput } from "../Common/DateInput";
@@ -87,7 +88,19 @@ export function ProjectForm({ project, onCancel, onSubmit, initialBlankStep = fa
   }
 
   function updateStep(stepId: string, patch: Partial<ProjectStep>) {
-    setExecutionSteps((current) => current.map((step) => (step.id === stepId ? { ...step, ...patch } : step)));
+    setExecutionSteps((current) =>
+      current.map((step) => {
+        if (step.id !== stepId) return step;
+        const next = { ...step, ...patch };
+        if (patch.status === "done" && !next.completedAt) {
+          next.completedAt = todayInputValue();
+        }
+        if (patch.status && patch.status !== "done") {
+          next.completedAt = "";
+        }
+        return next;
+      }),
+    );
   }
 
   function deleteStep(stepId: string) {
@@ -177,16 +190,17 @@ export function ProjectForm({ project, onCancel, onSubmit, initialBlankStep = fa
             <div className="project-step-editor" key={step.id}>
               <div className="project-step-editor-head">
                 <strong>推进事项 {index + 1}</strong>
-                <button className="icon-button danger-icon" type="button" aria-label="删除推进事项" title="删除推进事项" onClick={() => deleteStep(step.id)}>
+                <button className="text-button compact-text-button danger-text-button" type="button" onClick={() => deleteStep(step.id)}>
                   <Trash2 size={15} />
+                  删除
                 </button>
               </div>
               <label>
-                事项名称
+                要做什么
                 <input value={step.name} onChange={(event) => updateStep(step.id, { name: event.target.value })} />
               </label>
               <label>
-                事项说明
+                补充说明
                 <textarea value={step.description} onChange={(event) => updateStep(step.id, { description: event.target.value })} rows={2} />
               </label>
               <div className="form-grid">
@@ -201,21 +215,25 @@ export function ProjectForm({ project, onCancel, onSubmit, initialBlankStep = fa
                   </select>
                 </label>
                 <label>
-                  截止时间
+                  计划截止
                   <DateInput value={step.dueDate} onChange={(event) => updateStep(step.id, { dueDate: event.target.value })} />
                 </label>
               </div>
-              <label>
-                完成时间
-                <DateInput value={step.completedAt} onChange={(event) => updateStep(step.id, { completedAt: event.target.value })} />
-              </label>
+              {step.status === "done" ? (
+                <label>
+                  完成时间
+                  <DateInput value={step.completedAt} onChange={(event) => updateStep(step.id, { completedAt: event.target.value })} />
+                </label>
+              ) : (
+                <p className="field-hint">事项完成后再记录完成时间。</p>
+              )}
             </div>
           ))}
         </div>
         {executionSteps.length === 0 && <p className="muted-text">未拆分推进事项。</p>}
         <button className="secondary-button" type="button" onClick={addStep}>
           <Plus size={16} />
-          新增推进事项
+          添加推进事项
         </button>
       </ProjectFormSection>
 

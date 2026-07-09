@@ -15,7 +15,9 @@ import type {
 } from "../../types/dashboard";
 import { PROJECT_QUADRANTS, PROJECT_STATUSES, PROJECT_STEP_STATUSES } from "../../types/dashboard";
 import { formatDateTime, todayInputValue } from "../../utils/date";
+import { createId } from "../../utils/id";
 import { getProjectProgressSummary } from "../../utils/projectProgress";
+import { DateInput } from "../Common/DateInput";
 import { ImageGallery } from "../Common/ImageGallery";
 import { Modal } from "../Common/Modal";
 import { WorkItemForm } from "../WorkItems/WorkItemForm";
@@ -23,7 +25,7 @@ import { getProjectQuadrantLabel, getProjectStepStatusLabel, ProjectForm } from 
 
 export type LinkedRecordRef = { kind: "work" | "diary" | "idea"; id: string };
 
-type EditableProjectTextField = "currentProgress" | "nextAction" | "blockers" | "riskNotes";
+type EditableProjectTextField = "currentProgress" | "nextAction" | "blockers" | "riskNotes" | "retrospective";
 
 interface ProjectDetailModalProps {
   project: Project;
@@ -60,6 +62,8 @@ export function ProjectDetailModal({
   const [startWithNewProgressItem, setStartWithNewProgressItem] = useState(false);
   const [editingTextField, setEditingTextField] = useState<EditableProjectTextField | null>(null);
   const [textDraft, setTextDraft] = useState("");
+  const [editingStepId, setEditingStepId] = useState<string | null>(null);
+  const [stepDraft, setStepDraft] = useState<ProjectStep | null>(null);
   const progressSummary = getProjectProgressSummary(project);
   const progressLabel = progressSummary.hasProgressItems ? `${progressSummary.percent}%（${progressSummary.detail}）` : progressSummary.label;
   const relatedWork = dedupeWorkItems(workItems.filter((item) => item.projectId === project.id || item.linkedProjectIds?.includes(project.id)));
@@ -85,6 +89,8 @@ export function ProjectDetailModal({
   useEffect(() => {
     setEditingTextField(null);
     setTextDraft("");
+    setEditingStepId(null);
+    setStepDraft(null);
   }, [project.id]);
 
   function closeFromBackdrop() {
@@ -133,6 +139,54 @@ export function ProjectDetailModal({
     });
   }
 
+  function beginStepEdit(step: ProjectStep) {
+    setEditingTextField(null);
+    setEditingStepId(step.id);
+    setStepDraft({ ...step });
+  }
+
+  function beginNewStep() {
+    setEditingTextField(null);
+    const newStep = createBlankStep();
+    setEditingStepId(newStep.id);
+    setStepDraft(newStep);
+  }
+
+  function updateStepDraft(patch: Partial<ProjectStep>) {
+    setStepDraft((current) => {
+      if (!current) return current;
+      const next = { ...current, ...patch };
+      if (patch.status === "done" && !next.completedAt) {
+        next.completedAt = todayInputValue();
+      }
+      if (patch.status && patch.status !== "done") {
+        next.completedAt = "";
+      }
+      return next;
+    });
+  }
+
+  function cancelStepEdit() {
+    setEditingStepId(null);
+    setStepDraft(null);
+  }
+
+  function saveStepEdit() {
+    if (!stepDraft) return;
+    const normalizedStep = {
+      ...stepDraft,
+      name: stepDraft.name.trim(),
+      description: stepDraft.description.trim(),
+      completedAt: stepDraft.status === "done" ? stepDraft.completedAt : "",
+    };
+    const existingSteps = project.executionSteps || [];
+    const nextSteps = existingSteps.some((step) => step.id === normalizedStep.id)
+      ? existingSteps.map((step) => (step.id === normalizedStep.id ? normalizedStep : step))
+      : [...existingSteps, normalizedStep];
+    updateProjectPatch({ executionSteps: nextSteps });
+    cancelStepEdit();
+  }
+
   function beginTextEdit(field: EditableProjectTextField, value: string) {
     setEditingTextField(field);
     setTextDraft(value);
@@ -154,8 +208,7 @@ export function ProjectDetailModal({
   }
 
   function startAddingProgressItem() {
-    setStartWithNewProgressItem(true);
-    onEdit();
+    beginNewStep();
   }
 
   return (
@@ -252,54 +305,74 @@ export function ProjectDetailModal({
                   emphasized
                   action={
                     <button className="secondary-button compact-button" type="button" onClick={startAddingProgressItem}>
-                      新增事项
+                      添加推进事项
                     </button>
                   }
                 >
+                  {editingStepId && stepDraft && !project.executionSteps?.some((step) => step.id === editingStepId) && (
+                    <ProjectStepInlineEditor step={stepDraft} title="添加推进事项" onChange={updateStepDraft} onSave={saveStepEdit} onCancel={cancelStepEdit} />
+                  )}
                   {project.executionSteps?.length ? (
                     <div className="project-step-list">
                       {project.executionSteps.map((step, index) => {
-                        const progressItemWorkCount = getProgressItemWorkCount(workItems, project.id, step.id);
+                        const progressItemWorkItems = getProgressItemWorkItems(workItems, project.id, step.id);
+                        const isStepEditing = editingStepId === step.id && stepDraft;
                         return (
-                          <article className="project-step-card project-step-card-detailed" key={step.id}>
-                            <div className="project-step-card-head">
-                              <span className="project-step-index">{index + 1}</span>
-                              <div className="project-step-title-block">
-                                <strong>{step.name || "未命名推进事项"}</strong>
-                                <p>{step.description || "暂无事项说明。"}</p>
-                              </div>
-                              <label className="chip status quick-select-chip">
-                                <span className="sr-only">推进事项状态</span>
-                                <select value={step.status} onChange={(event) => updateStepStatus(step, event.target.value as ProjectStepStatus)}>
-                                  {PROJECT_STEP_STATUSES.map((status) => (
-                                    <option key={status} value={status}>
-                                      {getProjectStepStatusLabel(status)}
-                                    </option>
-                                  ))}
-                                </select>
-                              </label>
-                            </div>
-                            <div className="project-step-card-foot">
-                              <div className="project-step-source">
-                                <span>{progressItemWorkCount > 0 ? `来源工作 ${progressItemWorkCount} 条` : "暂未来源工作"}</span>
-                              {step.dueDate && <span className="chip outline">截止 {step.dueDate}</span>}
-                              {step.completedAt && <span className="chip outline">完成 {step.completedAt}</span>}
-                              </div>
-                              <div className="project-step-actions">
-                                <button className="secondary-button compact-button" type="button" onClick={() => setCreateWorkInput(buildProgressItemWorkInput(project, step, categories[0]?.id || ""))}>
-                                  <BriefcaseBusiness size={15} />
-                                  创建工作
-                                </button>
-                                <button className="secondary-button compact-button" type="button" onClick={() => markStepDone(step)} disabled={step.status === "done"}>
-                                  <CheckCircle2 size={15} />
-                                  标记完成
-                                </button>
-                                <button className="secondary-button compact-button" type="button" onClick={onEdit}>
-                                  <Edit3 size={15} />
-                                  编辑
-                                </button>
-                              </div>
-                            </div>
+                          <article className={`project-step-card project-step-card-detailed${step.status === "done" ? " project-step-card-done" : ""}`} key={step.id}>
+                            {isStepEditing ? (
+                              <ProjectStepInlineEditor step={stepDraft} title={`编辑事项 ${index + 1}`} onChange={updateStepDraft} onSave={saveStepEdit} onCancel={cancelStepEdit} />
+                            ) : (
+                              <>
+                                <div className="project-step-card-head">
+                                  <span className="project-step-index">{index + 1}</span>
+                                  <div className="project-step-title-block">
+                                    <strong>{step.name || "未命名推进事项"}</strong>
+                                    <p>{getStepDescriptionSummary(step.description)}</p>
+                                  </div>
+                                  <label className="chip status quick-select-chip">
+                                    <span className="sr-only">推进事项状态</span>
+                                    <select value={step.status} onChange={(event) => updateStepStatus(step, event.target.value as ProjectStepStatus)}>
+                                      {PROJECT_STEP_STATUSES.map((status) => (
+                                        <option key={status} value={status}>
+                                          {getProjectStepStatusLabel(status)}
+                                        </option>
+                                      ))}
+                                    </select>
+                                  </label>
+                                </div>
+                                <div className="project-step-card-foot">
+                                  <div className="project-step-source">
+                                    <span>计划截止：{step.dueDate || "未设置"}</span>
+                                    {step.completedAt && <span className="chip outline">完成 {step.completedAt}</span>}
+                                    {progressItemWorkItems.length > 0 && (
+                                      <span className="project-step-linked-work">
+                                        已关联工作：
+                                        {progressItemWorkItems.map((item, workIndex) => (
+                                          <button className="text-button compact-text-button" type="button" key={item.id} onClick={() => onOpenLinkedRecord({ kind: "work", id: item.id })}>
+                                            {workIndex > 0 ? "、" : ""}
+                                            {item.title}
+                                          </button>
+                                        ))}
+                                      </span>
+                                    )}
+                                  </div>
+                                  <div className="project-step-actions">
+                                    <button className="secondary-button compact-button" type="button" onClick={() => setCreateWorkInput(buildProgressItemWorkInput(project, step, categories[0]?.id || ""))}>
+                                      <BriefcaseBusiness size={15} />
+                                      创建工作
+                                    </button>
+                                    <button className="secondary-button compact-button" type="button" onClick={() => markStepDone(step)} disabled={step.status === "done"}>
+                                      <CheckCircle2 size={15} />
+                                      标记完成
+                                    </button>
+                                    <button className="secondary-button compact-button" type="button" onClick={() => beginStepEdit(step)}>
+                                      <Edit3 size={15} />
+                                      编辑事项
+                                    </button>
+                                  </div>
+                                </div>
+                              </>
+                            )}
                           </article>
                         );
                       })}
@@ -308,7 +381,7 @@ export function ProjectDetailModal({
                     <div className="project-step-empty">
                       <p className="muted-text">暂未拆分推进事项。</p>
                       <button className="secondary-button compact-button" type="button" onClick={startAddingProgressItem}>
-                        新增推进事项
+                        添加推进事项
                       </button>
                     </div>
                   )}
@@ -370,7 +443,6 @@ export function ProjectDetailModal({
                 </ProjectDetailSection>
 
                 <ProjectDetailSection title="关联内容">
-                  {!hasRelatedContent && <p className="muted-text">暂无关联内容。</p>}
                   <RelatedGroup title="关联工作内容" records={relatedWork.map((item) => ({
                     id: item.id,
                     title: item.title,
@@ -408,7 +480,18 @@ export function ProjectDetailModal({
                     onSave={() => saveTextEdit("riskNotes")}
                     onCancel={cancelTextEdit}
                   />
-                  <DetailText label="其他备注" value={joinOptionalText([project.completionResult, project.retrospective])} />
+                  <EditableDetailText
+                    label="其他备注"
+                    value={project.retrospective || ""}
+                    emptyText="暂无内容。"
+                    editLabel="编辑"
+                    isEditing={editingTextField === "retrospective"}
+                    draft={textDraft}
+                    onBegin={() => beginTextEdit("retrospective", project.retrospective || "")}
+                    onDraftChange={setTextDraft}
+                    onSave={() => saveTextEdit("retrospective")}
+                    onCancel={cancelTextEdit}
+                  />
                 </ProjectDetailSection>
               </div>
             )}
@@ -431,6 +514,69 @@ export function ProjectDetailModal({
         </Modal>
       )}
     </>
+  );
+}
+
+function ProjectStepInlineEditor({
+  step,
+  title,
+  onChange,
+  onSave,
+  onCancel,
+}: {
+  step: ProjectStep;
+  title: string;
+  onChange: (patch: Partial<ProjectStep>) => void;
+  onSave: () => void;
+  onCancel: () => void;
+}) {
+  return (
+    <div className="project-step-inline-editor">
+      <div className="project-step-editor-head">
+        <strong>{title}</strong>
+        <span className="field-hint">只修改这一条推进事项</span>
+      </div>
+      <label>
+        要做什么
+        <input value={step.name} onChange={(event) => onChange({ name: event.target.value })} />
+      </label>
+      <label>
+        补充说明
+        <textarea value={step.description} onChange={(event) => onChange({ description: event.target.value })} rows={2} />
+      </label>
+      <div className="form-grid compact-step-form-grid">
+        <label>
+          事项状态
+          <select value={step.status} onChange={(event) => onChange({ status: event.target.value as ProjectStepStatus })}>
+            {PROJECT_STEP_STATUSES.map((stepStatus) => (
+              <option key={stepStatus} value={stepStatus}>
+                {getProjectStepStatusLabel(stepStatus)}
+              </option>
+            ))}
+          </select>
+        </label>
+        <label>
+          计划截止
+          <DateInput value={step.dueDate} onChange={(event) => onChange({ dueDate: event.target.value })} />
+        </label>
+      </div>
+      {step.status === "done" ? (
+        <label>
+          完成时间
+          <DateInput value={step.completedAt} onChange={(event) => onChange({ completedAt: event.target.value })} />
+        </label>
+      ) : (
+        <p className="field-hint">标记为已完成后再记录完成时间。</p>
+      )}
+      <div className="quick-edit-actions">
+        <button className="primary-button compact-button" type="button" onClick={onSave}>
+          保存事项
+        </button>
+        <button className="secondary-button compact-button" type="button" onClick={onCancel}>
+          取消
+        </button>
+      </div>
+    </div>
   );
 }
 
@@ -640,10 +786,10 @@ function buildNextActionWorkInput(project: Project, fallbackCategoryId: string):
   };
 }
 
-function getProgressItemWorkCount(workItems: WorkItem[], projectId: string, itemId: string): number {
+function getProgressItemWorkItems(workItems: WorkItem[], projectId: string, itemId: string): WorkItem[] {
   return workItems.filter(
     (item) => item.sourceProjectType === "progressItem" && item.sourceProjectId === projectId && item.sourceProjectProgressItemId === itemId,
-  ).length;
+  );
 }
 
 function getRelatedWorkStatus(item: WorkItem): string {
@@ -661,8 +807,14 @@ function dedupeWorkItems(items: WorkItem[]): WorkItem[] {
   });
 }
 
-function joinOptionalText(values: Array<string | undefined>): string {
-  return values.filter(Boolean).join("\n\n");
+function getStepDescriptionSummary(description: string): string {
+  const value = description.trim();
+  if (!value) return "暂无事项说明。";
+  return value.length > 80 ? `${value.slice(0, 80)}...` : value;
+}
+
+function createBlankStep(): ProjectStep {
+  return { id: createId("step"), name: "", description: "", status: "todo", dueDate: "", completedAt: "" };
 }
 
 function toProjectInput(project: Project): ProjectInput {

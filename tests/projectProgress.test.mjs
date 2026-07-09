@@ -142,7 +142,7 @@ const oldBackup = { diaryEntries: [], workItems: [], ideas: [], categories: [], 
 assert.equal(validateBackup(oldBackup), true);
 const newBackup = {
   version: "1.3.0",
-  appVersion: "1.3.9",
+  appVersion: "1.4.0",
   schemaVersion: "1.3.0",
   diaryEntries: [],
   workItems: [progressWork, nextActionWork],

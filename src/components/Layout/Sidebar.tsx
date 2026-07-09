@@ -1,3 +1,4 @@
+import { useEffect, useState } from "react";
 import {
   BookOpenText,
   ChevronLeft,
@@ -9,6 +10,7 @@ import {
   Settings,
   X,
 } from "lucide-react";
+import { APP_VERSION } from "../../data/appVersion";
 
 export type ViewKey = "dashboard" | "diary" | "work" | "ideas" | "projects" | "categories" | "settings";
 
@@ -31,6 +33,8 @@ interface SidebarProps {
 }
 
 export function Sidebar({ activeView, collapsed, mobileOpen, onNavigate, onToggleCollapsed, onClose }: SidebarProps) {
+  const now = useLiveTime();
+
   return (
     <>
       <aside className={`sidebar ${collapsed ? "sidebar-collapsed" : ""} ${mobileOpen ? "sidebar-open" : ""}`}>
@@ -66,8 +70,38 @@ export function Sidebar({ activeView, collapsed, mobileOpen, onNavigate, onToggl
             );
           })}
         </nav>
+        <div className="sidebar-clock" aria-label="当前时间">
+          <strong>{formatClockTime(now)}</strong>
+          <span>{formatClockDate(now)}</span>
+          <small>v{APP_VERSION}</small>
+        </div>
       </aside>
       {mobileOpen && <button className="sidebar-scrim" type="button" aria-label="关闭菜单遮罩" onClick={onClose} />}
     </>
   );
+}
+
+function useLiveTime() {
+  const [now, setNow] = useState(() => new Date());
+
+  useEffect(() => {
+    const timer = window.setInterval(() => setNow(new Date()), 1000);
+    return () => window.clearInterval(timer);
+  }, []);
+
+  return now;
+}
+
+function formatClockTime(date: Date): string {
+  return new Intl.DateTimeFormat("zh-CN", {
+    hour: "2-digit",
+    minute: "2-digit",
+    second: "2-digit",
+    hour12: false,
+  }).format(date);
+}
+
+function formatClockDate(date: Date): string {
+  const weekday = new Intl.DateTimeFormat("zh-CN", { weekday: "short" }).format(date);
+  return `${date.getFullYear()}.${date.getMonth() + 1}.${date.getDate()} · ${weekday}`;
 }
