@@ -331,6 +331,8 @@ button.mobile-sidebar-toggle {
 
 .main-content {
   position: relative;
+  grid-column: 2;
+  min-width: 0;
   width: min(100%, 1680px);
   margin: 0 auto;
   padding: 18px 22px 28px;
@@ -3981,6 +3983,7 @@ legend {
   }
 
   .main-content {
+    grid-column: auto;
     width: 100%;
     padding: 56px 12px 84px;
   }
