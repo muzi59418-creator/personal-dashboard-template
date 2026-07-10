@@ -14,9 +14,10 @@
 - v1.3.9：首页、项目详情和设置页视觉密度优化，并补齐历史更新日志版本号。
 - v1.4.0：项目详情抽屉与时钟视觉优化。
 - v1.4.1：仪表板视觉设计美化，统一卡片、按钮、表单、弹窗和响应式体验。
+- v1.4.2：首页轻科技视觉升级，强化统计卡、快速记录、完成概览和首页模块层次。
 - 每个正式发布版本，本地正式版、GitHub 开源模板、本地 Skill 包必须使用同一版本号。
 - 版本字段统一使用 `1.0.0`、`1.1.0` 这种无 `v` 前缀格式。
-- 页面标题、README、更新日志、Git Tag 显示时可使用 `v1.4.1`。
+- 页面标题、README、更新日志、Git Tag 显示时可使用 `v1.4.2`。
 - 不篡改旧 Git 历史、旧 Tag 或已发布版本记录。
 - 仅在无冲突时新增 `v1.0.0` 基线 Tag。
 
@@ -27,6 +28,7 @@
 - v1.2.0 读取旧 localStorage 时会先保存 `personal-dashboard-template:v1:backup-before-v1.2.0`，再补例行规则和单次例行工作追溯字段。
 - v1.3.0 读取旧 localStorage 时会先保存 `personal-dashboard-template:v1:backup-before-v1.3.0`，再补项目来源字段和迁移标记。
 - v1.4.1 不新增数据结构迁移，继续沿用 v1.3.0 的 `schemaVersion` 和 `personal-dashboard-template:v1` 存储键。
+- v1.4.2 仅升级视觉与版本面，继续沿用 v1.3.0 的 `schemaVersion` 和 `personal-dashboard-template:v1` 存储键。
 - 新导出 JSON 包含 `version`、`appVersion`、`schemaVersion`。
 - 不删除旧字段；新增字段通过归一化迁移补齐。
 - 旧项目 `progress` 手动进度字段继续保留，但页面项目进度按推进事项自动计算。

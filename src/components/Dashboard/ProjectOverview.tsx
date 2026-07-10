@@ -51,7 +51,7 @@ function ProjectOverviewGroup({ title, emptyTitle, projects }: ProjectOverviewGr
           <div className="project-status-legend" aria-label={`${title}状态分布`}>
             <StatusLegend color="#64748b" label="未开始" />
             <StatusLegend color="#2563eb" label="进行中" />
-            <StatusLegend color="#0f766e" label="已完成" />
+            <StatusLegend color="#14b8a6" label="已完成" />
             {stats.other > 0 && <StatusLegend color="#94a3b8" label="其他" />}
           </div>
         </div>
@@ -117,7 +117,7 @@ function makeProjectChartBackground(stats: ReturnType<typeof getProjectStats>) {
   return `conic-gradient(
     #64748b 0% ${notStartedEnd}%,
     #2563eb ${notStartedEnd}% ${activeEnd}%,
-    #0f766e ${activeEnd}% ${completedEnd}%,
+    #14b8a6 ${activeEnd}% ${completedEnd}%,
     #94a3b8 ${completedEnd}% 100%
   )`;
 }

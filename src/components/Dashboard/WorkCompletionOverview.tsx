@@ -97,9 +97,9 @@ function makeChartBackground(stats: ReturnType<typeof getWorkCompletionStats>) {
   const pendingEnd = activeEnd + (stats.pending / stats.total) * 100;
 
   return `conic-gradient(
-    #0f766e 0% ${completedEnd}%,
+    #14b8a6 0% ${completedEnd}%,
     #2563eb ${completedEnd}% ${activeEnd}%,
-    #b45309 ${activeEnd}% ${pendingEnd}%,
+    #f59e0b ${activeEnd}% ${pendingEnd}%,
     #94a3b8 ${pendingEnd}% 100%
   )`;
 }

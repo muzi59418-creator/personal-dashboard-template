@@ -11,6 +11,15 @@ export interface ChangelogEntry {
 
 export const changelogEntries: ChangelogEntry[] = [
   {
+    date: "2026-07-10",
+    title: "v1.4.2 首页轻科技视觉升级",
+    type: "视觉优化",
+    modules: ["首页", "统计卡片", "快速记录", "工作完成概览", "今日工作台", "侧边栏"],
+    summary:
+      "首页加入克制的蓝青氛围与半透明卡片层次；升级统计卡、快速记录、工作完成概览、今日工作台和工作日记视觉；统一侧边栏、时钟、空状态、focus 与 reduced-motion 适配。本次不新增依赖，不改功能逻辑、统计口径、数据结构或 localStorage。",
+    status: "待提交",
+  },
+  {
     date: "2026-07-09",
     title: "v1.4.1 仪表板视觉设计美化",
     type: "视觉优化",

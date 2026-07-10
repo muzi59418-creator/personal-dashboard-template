@@ -13,7 +13,7 @@ export function DiaryPreview({ entries, projects, onViewAll }: DiaryPreviewProps
   const latestEntries = sortByDateDesc(entries).slice(0, 3);
 
   return (
-    <section className="panel dashboard-equal-panel">
+    <section className="panel dashboard-equal-panel diary-preview-panel">
       <div className="section-head">
         <div>
           <h2>工作日记</h2>
