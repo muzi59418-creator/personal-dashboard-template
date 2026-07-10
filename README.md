@@ -117,7 +117,7 @@ npm run lint
 
 当前版本：v1.4.2
 
-v1.4.2 为首页加入克制的蓝青氛围、半透明卡片层次和统一微交互，升级统计卡、快速记录、工作完成概览、今日工作台、工作日记与侧边栏视觉。该版本不新增依赖，不修改功能逻辑、数据结构、统计口径、localStorage key 或 SCHEMA_VERSION。
+v1.4.2 为首页加入克制的蓝青氛围、半透明卡片层次和统一微交互，升级统计卡、快速记录、工作完成概览、今日工作台、工作日记与侧边栏视觉，并在发布前收敛彩色边框和圆环光晕。该版本不新增依赖，不修改功能逻辑、数据结构、统计口径、localStorage key 或 SCHEMA_VERSION。
 
 更多版本记录见 [CHANGELOG.md](CHANGELOG.md) 和 [docs/VERSIONING.md](docs/VERSIONING.md)。
 
