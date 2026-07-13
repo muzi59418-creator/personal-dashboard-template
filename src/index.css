@@ -540,6 +540,11 @@ button.mobile-sidebar-toggle {
   padding-top: 0;
 }
 
+.today-workbench-section-empty {
+  gap: 4px;
+  padding: 6px 0;
+}
+
 .today-workbench-title {
   display: flex;
   align-items: center;
@@ -658,6 +663,14 @@ button.mobile-sidebar-toggle {
 .today-routine-empty .empty-state {
   min-height: 44px;
   padding: 9px 12px;
+}
+
+.today-workbench-empty {
+  margin: 0;
+  padding: 2px;
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.5;
 }
 
 .project-action-list {
@@ -4655,6 +4668,7 @@ body {
 }
 
 .dashboard-home .quick-capture {
+  min-height: 304px;
   border-color: rgba(147, 197, 253, 0.72);
   box-shadow:
     0 1px 2px rgba(15, 23, 42, 0.025),
@@ -4702,6 +4716,8 @@ body {
 }
 
 .dashboard-home .work-completion-overview {
+  min-height: 304px;
+  gap: 8px;
   border-color: rgba(216, 224, 236, 0.94);
   box-shadow:
     0 1px 2px rgba(15, 23, 42, 0.025),
@@ -4713,20 +4729,42 @@ body {
   box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.72);
 }
 
+.dashboard-home .work-completion-overview .completion-chart-wrap {
+  gap: 4px;
+  padding-top: 0;
+}
+
+.dashboard-home .work-completion-overview .completion-donut {
+  width: 136px;
+}
+
 .dashboard-home .completion-donut-center {
   border: 1px solid rgba(226, 232, 240, 0.84);
   background: rgba(255, 255, 255, 0.94);
   box-shadow: 0 8px 20px rgba(15, 23, 42, 0.09);
 }
 
+.dashboard-home .work-completion-overview .completion-donut-center {
+  width: 84px;
+}
+
 .dashboard-home .completion-donut-center strong {
   font-size: 30px;
+}
+
+.dashboard-home .work-completion-overview .completion-donut-center strong {
+  font-size: 26px;
 }
 
 .dashboard-home .completion-stat {
   border-color: #dfe8f3;
   background: linear-gradient(145deg, rgba(248, 250, 252, 0.9), rgba(255, 255, 255, 0.98));
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.88);
+}
+
+.dashboard-home .work-completion-overview .completion-stat {
+  gap: 4px;
+  padding: 8px 10px;
 }
 
 .dashboard-home .today-completed-link {
@@ -4832,6 +4870,11 @@ body {
   .dashboard-home .panel,
   .dashboard-home .project-overview-group {
     box-shadow: 0 8px 22px rgba(30, 64, 175, 0.055);
+  }
+
+  .dashboard-home .quick-capture,
+  .dashboard-home .work-completion-overview {
+    min-height: auto;
   }
 }
 

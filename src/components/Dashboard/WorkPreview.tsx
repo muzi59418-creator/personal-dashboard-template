@@ -50,15 +50,13 @@ export function WorkPreview({ categories, items, projects, onOpenWork, onOpenPro
           </div>
         </div>
 
-        <div className="today-workbench-section">
+        <div className={`today-workbench-section${visiblePriorityItems.length === 0 ? " today-workbench-section-empty" : ""}`}>
           <div className="today-workbench-title">
             <h3>优先处理</h3>
             <span>最多显示 3 条</span>
           </div>
           {visiblePriorityItems.length === 0 ? (
-            <div className="compact-empty-state">
-              <EmptyState title="暂无优先处理事项" description="" />
-            </div>
+            <p className="today-workbench-empty">暂无优先处理事项</p>
           ) : (
             <div className="today-work-list">
               {visiblePriorityItems.map((item, index) => (
@@ -95,6 +93,7 @@ export function WorkPreview({ categories, items, projects, onOpenWork, onOpenPro
                   item={item}
                   index={index}
                   sourceLabel=""
+                  showMetadata={false}
                   categoryMap={categoryMap}
                   onOpenWork={onOpenWork}
                   onUpdateWork={onUpdateWork}
@@ -106,15 +105,13 @@ export function WorkPreview({ categories, items, projects, onOpenWork, onOpenPro
           )}
         </div>
 
-        <div className="today-workbench-section">
+        <div className={`today-workbench-section${projectActions.length === 0 ? " today-workbench-section-empty" : ""}`}>
           <div className="today-workbench-title">
             <h3>项目推进</h3>
             <span>{projectActions.length} 个</span>
           </div>
           {projectActions.length === 0 ? (
-            <div className="compact-empty-state">
-              <EmptyState title="今天暂无待推进事项" description="" />
-            </div>
+            <p className="today-workbench-empty">暂无待推进项目</p>
           ) : (
             <div className="project-action-list">
               {projectActions.map((action, index) => (
@@ -178,6 +175,7 @@ interface TodayWorkRowProps {
   item: WorkItem;
   index: number;
   sourceLabel: string;
+  showMetadata?: boolean;
   categoryMap: Map<string, Category>;
   onOpenWork: (workId: string) => void;
   onUpdateWork: (id: string, input: WorkItemInput) => void;
@@ -185,7 +183,7 @@ interface TodayWorkRowProps {
   onPostponeRoutineWork?: (id: string, targetDate: string) => void;
 }
 
-function TodayWorkRow({ item, index, sourceLabel, categoryMap, onOpenWork, onUpdateWork, onSkipRoutineWork, onPostponeRoutineWork }: TodayWorkRowProps) {
+function TodayWorkRow({ item, index, sourceLabel, showMetadata = true, categoryMap, onOpenWork, onUpdateWork, onSkipRoutineWork, onPostponeRoutineWork }: TodayWorkRowProps) {
   const category = categoryMap.get(item.categoryId);
   const routine = isRoutineWork(item);
   return (
@@ -207,9 +205,9 @@ function TodayWorkRow({ item, index, sourceLabel, categoryMap, onOpenWork, onUpd
       <div className="today-work-main">
         <div className="today-work-title-line">
           <strong>{item.title}</strong>
-          <span className="today-work-due">截止 {formatDate(item.date)}</span>
-          {sourceLabel && <span className="today-work-source">{sourceLabel}</span>}
-          {!sourceLabel && category && <span className="today-work-source">{category.name}</span>}
+          {showMetadata && <span className="today-work-due">截止 {formatDate(item.date)}</span>}
+          {showMetadata && sourceLabel && <span className="today-work-source">{sourceLabel}</span>}
+          {showMetadata && !sourceLabel && category && <span className="today-work-source">{category.name}</span>}
         </div>
       </div>
       <WorkStatusSelect

@@ -168,7 +168,7 @@ export function QuickCapture({
         onPaste={handlePaste}
         placeholder="写下当前内容，或直接 Ctrl + V 粘贴截图"
         aria-label="记录内容"
-        rows={5}
+        rows={4}
       />
       {screenshots.length > 0 && (
         <HorizontalImageStrip images={screenshots.map((screenshot) => screenshot.dataUrl)} onRemove={removeScreenshot} />

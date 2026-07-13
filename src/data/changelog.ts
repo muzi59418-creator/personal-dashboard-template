@@ -11,6 +11,15 @@ export interface ChangelogEntry {
 
 export const changelogEntries: ChangelogEntry[] = [
   {
+    date: "2026-07-13",
+    title: "v1.4.3 首页信息密度优化",
+    type: "视觉优化",
+    modules: ["首页", "今日工作台", "工作日记", "快速记录", "工作完成概览"],
+    summary:
+      "今日例行只保留序号、标题和状态，优先处理与项目推进的空提示改得更轻；工作日记摘要保持两行显示，快速记录和完成概览适度减高，让首屏能看到更多今日工作内容。本次不改原始数据、统计逻辑或 localStorage。",
+    status: "待提交",
+  },
+  {
     date: "2026-07-10",
     title: "v1.4.2 首页轻科技视觉升级",
     type: "视觉优化",
