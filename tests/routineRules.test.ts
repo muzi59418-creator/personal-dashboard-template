@@ -66,7 +66,7 @@ function rule(input: Partial<RoutineWorkTemplate>): RoutineWorkTemplate {
 function seedData(rules: RoutineWorkTemplate[], workItems: WorkItem[] = []): DashboardData {
   return {
     version: "1.3.0",
-    appVersion: "1.4.3",
+    appVersion: "1.4.4",
     schemaVersion: "1.3.0",
     updatedAt: "2026-01-01T00:00:00.000Z",
     migrations: [],
@@ -178,13 +178,13 @@ localStorage.setItem(
   }),
 );
 const migrated = readDashboard();
-assert.equal(migrated.appVersion, "1.4.3", "旧数据迁移补 appVersion");
+assert.equal(migrated.appVersion, "1.4.4", "旧数据迁移补 appVersion");
 assert.equal(migrated.schemaVersion, "1.3.0", "旧数据迁移补 schemaVersion");
 assert.equal(migrated.workItems[0].title, "旧任务", "旧数据迁移不丢失工作记录");
 assert.equal(migrated.routineWorkTemplates[0].frequency, "custom", "旧手动频率兼容为自定义");
 
 const exported = exportData();
-assert.equal(JSON.parse(exported).appVersion, "1.4.3", "新 JSON 导出包含 appVersion");
+assert.equal(JSON.parse(exported).appVersion, "1.4.4", "新 JSON 导出包含 appVersion");
 assert.equal(JSON.parse(exported).schemaVersion, "1.3.0", "新 JSON 导出包含 schemaVersion");
 const imported = importData(exported);
 assert.equal(imported.workItems[0].title, "旧任务", "新 JSON 可再次导入");

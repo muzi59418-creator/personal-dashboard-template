@@ -47,7 +47,6 @@ export function WorkCompletionOverview({ items }: WorkCompletionOverviewProps) {
         <div className={`completion-donut ${stats.total === 0 ? "empty" : ""}`} style={{ background: chartBackground }} aria-label={`完成率 ${completionRate}%`}>
           <div className="completion-donut-center">
             <strong>{completionRate}%</strong>
-            <span>完成率</span>
           </div>
         </div>
         {stats.total === 0 && <p className="completion-empty-text">暂无工作数据</p>}

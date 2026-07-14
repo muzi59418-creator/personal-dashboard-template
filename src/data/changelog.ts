@@ -11,6 +11,15 @@ export interface ChangelogEntry {
 
 export const changelogEntries: ChangelogEntry[] = [
   {
+    date: "2026-07-14",
+    title: "v1.4.4 首页工作台体验优化",
+    type: "功能优化",
+    modules: ["首页", "今日工作台", "项目推进", "工作完成概览"],
+    summary:
+      "工作完成概览圆环只保留居中的百分比；今日例行空状态的图标、文案和留白统一对称；项目推进展示可继续推进项目中的全部未完成事项，不再按当天日期筛选，并排除已完成事项及不应继续推进的项目。本次不改完成率统计口径、项目进度算法、原始数据或 localStorage。",
+    status: "待提交",
+  },
+  {
     date: "2026-07-13",
     title: "v1.4.3 首页信息密度优化",
     type: "视觉优化",

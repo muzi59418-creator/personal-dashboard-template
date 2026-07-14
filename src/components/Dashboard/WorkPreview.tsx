@@ -29,7 +29,7 @@ export function WorkPreview({ categories, items, projects, onOpenWork, onOpenPro
   const todayRoutineItems = dedupeRoutineItems(items.filter((item) => isRoutineWork(item) && item.date === today)).sort(compareTodayWorkItems);
   const pendingRoutineItems = todayRoutineItems.filter((item) => isActionableStatus(item) && !item.routineSkipped);
   const completedTodayItems = getCompletedTodayItems(items, today);
-  const projectActions = getProjectActions(projects, today);
+  const projectActions = getProjectActions(projects);
 
   return (
     <>
@@ -76,7 +76,7 @@ export function WorkPreview({ categories, items, projects, onOpenWork, onOpenPro
           )}
         </div>
 
-        <div className="today-workbench-section">
+        <div className={`today-workbench-section${pendingRoutineItems.length === 0 ? " today-workbench-section-empty" : ""}`}>
           <div className="today-workbench-title">
             <h3>今日例行</h3>
             <span>{pendingRoutineItems.length} 条</span>
@@ -111,7 +111,7 @@ export function WorkPreview({ categories, items, projects, onOpenWork, onOpenPro
             <span>{projectActions.length} 个</span>
           </div>
           {projectActions.length === 0 ? (
-            <p className="today-workbench-empty">暂无待推进项目</p>
+            <p className="today-workbench-empty">暂无待处理推进事项</p>
           ) : (
             <div className="project-action-list">
               {projectActions.map((action, index) => (
@@ -275,7 +275,7 @@ function ProjectActionRow({
       <div className="today-work-main">
         <div className="today-work-title-line">
           <strong>{action.name}</strong>
-          <span className="today-work-due">截止 {formatDate(action.dueDate)}</span>
+          {action.dueDate && <span className="today-work-due">截止 {formatDate(action.dueDate)}</span>}
         </div>
       </div>
       <label
@@ -363,12 +363,12 @@ function getLocalDatePart(value: string | undefined): string {
   return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
 }
 
-function getProjectActions(projects: Project[], today: string): ProjectAction[] {
+function getProjectActions(projects: Project[]): ProjectAction[] {
   return projects
+    .filter(isProjectActionable)
     .flatMap((project) =>
       (project.executionSteps || [])
         .filter((step) => step.status !== "done")
-        .filter((step) => getProjectStepPlanDate(step) === today)
         .map((step) => ({
           project,
           projectId: project.id,
@@ -378,8 +378,11 @@ function getProjectActions(projects: Project[], today: string): ProjectAction[] 
           status: step.status,
         })),
     )
-    .sort((a, b) => a.name.localeCompare(b.name, "zh-CN"))
-    .slice(0, 6);
+    .sort((a, b) => a.name.localeCompare(b.name, "zh-CN"));
+}
+
+function isProjectActionable(project: Project): boolean {
+  return project.status === "未开始" || project.status === "进行中" || project.status === "长期维护";
 }
 
 function getProjectStepPlanDate(step: ProjectStep): string {

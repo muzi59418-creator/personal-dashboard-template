@@ -142,7 +142,7 @@ const oldBackup = { diaryEntries: [], workItems: [], ideas: [], categories: [], 
 assert.equal(validateBackup(oldBackup), true);
 const newBackup = {
   version: "1.3.0",
-  appVersion: "1.4.3",
+  appVersion: "1.4.4",
   schemaVersion: "1.3.0",
   diaryEntries: [],
   workItems: [progressWork, nextActionWork],
@@ -164,5 +164,12 @@ assert.doesNotMatch(projectOverviewSource, /project\.progress/);
 const projectCardSource = readFileSync("src/components/Projects/ProjectCard.tsx", "utf8");
 assert.match(projectCardSource, /getProjectProgressSummary/);
 assert.doesNotMatch(projectCardSource, /project\.progress/);
+
+const workPreviewSource = readFileSync("src/components/Dashboard/WorkPreview.tsx", "utf8");
+assert.match(workPreviewSource, /\.filter\(isProjectActionable\)/);
+assert.match(workPreviewSource, /step\.status !== "done"/);
+assert.doesNotMatch(workPreviewSource, /getProjectStepPlanDate\(step\) === today/);
+assert.match(workPreviewSource, /project\.status === "未开始" \|\| project\.status === "进行中" \|\| project\.status === "长期维护"/);
+assert.match(workPreviewSource, /暂无待处理推进事项/);
 
 console.log("projectProgress tests passed");

@@ -661,8 +661,12 @@ button.mobile-sidebar-toggle {
 }
 
 .today-routine-empty .empty-state {
-  min-height: 44px;
-  padding: 9px 12px;
+  grid-template-rows: auto auto;
+  align-content: center;
+  justify-items: center;
+  gap: 6px;
+  min-height: 56px;
+  padding: 8px 12px;
 }
 
 .today-workbench-empty {
@@ -4745,6 +4749,9 @@ body {
 }
 
 .dashboard-home .work-completion-overview .completion-donut-center {
+  display: flex;
+  align-items: center;
+  justify-content: center;
   width: 84px;
 }
 
@@ -4754,6 +4761,9 @@ body {
 
 .dashboard-home .work-completion-overview .completion-donut-center strong {
   font-size: 26px;
+  line-height: 1;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
 }
 
 .dashboard-home .completion-stat {
