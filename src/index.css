@@ -699,6 +699,34 @@ button.mobile-sidebar-toggle {
   white-space: nowrap;
 }
 
+.project-action-row .today-work-title-line {
+  align-items: center;
+  flex-direction: row;
+  overflow: hidden;
+}
+
+.project-action-title-group {
+  display: flex;
+  flex: 1 1 auto;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  overflow: hidden;
+}
+
+.project-action-title-group strong {
+  flex: 1 1 auto;
+}
+
+.project-action-row .project-action-project {
+  flex: 0 1 36%;
+  max-width: 36%;
+  color: #94a3b8;
+  font-size: 12px;
+  font-weight: 650;
+  white-space: nowrap;
+}
+
 .project-action-row span {
   overflow: hidden;
   color: var(--muted);
@@ -4192,6 +4220,10 @@ legend {
 
   .project-action-row span {
     white-space: normal;
+  }
+
+  .project-action-row .project-action-project {
+    white-space: nowrap;
   }
 
   .today-work-modal-row {

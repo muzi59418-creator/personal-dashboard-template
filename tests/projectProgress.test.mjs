@@ -171,5 +171,7 @@ assert.match(workPreviewSource, /step\.status !== "done"/);
 assert.doesNotMatch(workPreviewSource, /getProjectStepPlanDate\(step\) === today/);
 assert.match(workPreviewSource, /project\.status === "未开始" \|\| project\.status === "进行中" \|\| project\.status === "长期维护"/);
 assert.match(workPreviewSource, /暂无待处理推进事项/);
+assert.match(workPreviewSource, /className="project-action-project"/);
+assert.match(workPreviewSource, /action\.project\.name/);
 
 console.log("projectProgress tests passed");

@@ -274,7 +274,14 @@ function ProjectActionRow({
       </span>
       <div className="today-work-main">
         <div className="today-work-title-line">
-          <strong>{action.name}</strong>
+          <div className="project-action-title-group">
+            <strong>{action.name}</strong>
+            {action.project.name && (
+              <span className="project-action-project" title={action.project.name}>
+                · {action.project.name}
+              </span>
+            )}
+          </div>
           {action.dueDate && <span className="today-work-due">截止 {formatDate(action.dueDate)}</span>}
         </div>
       </div>
