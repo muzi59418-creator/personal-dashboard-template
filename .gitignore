@@ -3,6 +3,7 @@ dist
 dist-ssr
 .env
 .env.*
+!.env.example
 *.local
 .DS_Store
 .vscode

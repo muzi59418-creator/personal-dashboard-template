@@ -68,11 +68,33 @@ import { IdeaList } from "./components/Ideas/IdeaList";
 import { ProjectDetailModal } from "./components/Projects/ProjectDetailModal";
 import { ProjectList } from "./components/Projects/ProjectList";
 import { BackupPanel } from "./components/Settings/BackupPanel";
+import { CloudSyncPanel } from "./components/Settings/CloudSyncPanel";
 import { WorkItemDetailModal } from "./components/WorkItems/WorkItemDetailModal";
 import { WorkItemList } from "./components/WorkItems/WorkItemList";
 import type { StatRecord } from "./utils/stats";
+import { AuthGate } from "./components/Auth/AuthGate";
+import type { CloudDashboardProbeResult, CloudDashboardRecord } from "./data/cloudSync";
+import { isCloudModeEnabled } from "./lib/supabase";
 
 function App() {
+  if (!isCloudModeEnabled) return <DashboardApp />;
+
+  return (
+    <AuthGate>
+      {({ onSignOut, cloudProbe, onCloudInitialized }) => (
+        <DashboardApp onSignOut={onSignOut} cloudProbe={cloudProbe} onCloudInitialized={onCloudInitialized} />
+      )}
+    </AuthGate>
+  );
+}
+
+interface DashboardAppProps {
+  onSignOut?: () => Promise<void>;
+  cloudProbe?: CloudDashboardProbeResult;
+  onCloudInitialized?: (record: CloudDashboardRecord) => void;
+}
+
+function DashboardApp({ onSignOut, cloudProbe, onCloudInitialized }: DashboardAppProps) {
   const [data, setData] = useState<DashboardData>(() => getDashboardData());
   const [activeView, setActiveView] = useState<ViewKey>("dashboard");
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
@@ -220,6 +242,7 @@ function App() {
           onNavigate={navigate}
           onToggleCollapsed={toggleSidebarCollapsed}
           onClose={() => setMobileMenuOpen(false)}
+          onSignOut={onSignOut}
         />
         <main className="main-content">
           {notice && <div className="toast">{notice}</div>}
@@ -311,6 +334,16 @@ function App() {
               onExport={exportData}
               onImport={actions.importDashboard}
               onClear={actions.clearDashboard}
+              cloudSyncPanel={
+                cloudProbe && onCloudInitialized ? (
+                  <CloudSyncPanel
+                    probe={cloudProbe}
+                    onInitialized={onCloudInitialized}
+                    onExport={exportData}
+                    onRestore={actions.importDashboard}
+                  />
+                ) : undefined
+              }
             />
           )}
         </main>

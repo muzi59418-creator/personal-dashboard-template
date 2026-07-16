@@ -7,6 +7,7 @@ import {
   FolderKanban,
   LayoutDashboard,
   Lightbulb,
+  LogOut,
   Settings,
   X,
 } from "lucide-react";
@@ -30,9 +31,10 @@ interface SidebarProps {
   onNavigate: (view: ViewKey) => void;
   onToggleCollapsed: () => void;
   onClose: () => void;
+  onSignOut?: () => Promise<void>;
 }
 
-export function Sidebar({ activeView, collapsed, mobileOpen, onNavigate, onToggleCollapsed, onClose }: SidebarProps) {
+export function Sidebar({ activeView, collapsed, mobileOpen, onNavigate, onToggleCollapsed, onClose, onSignOut }: SidebarProps) {
   const now = useLiveTime();
 
   return (
@@ -70,6 +72,12 @@ export function Sidebar({ activeView, collapsed, mobileOpen, onNavigate, onToggl
             );
           })}
         </nav>
+        {onSignOut && (
+          <button className="nav-button sidebar-sign-out" type="button" title={collapsed ? "退出登录" : undefined} onClick={() => void onSignOut()}>
+            <LogOut size={18} />
+            <span>退出登录</span>
+          </button>
+        )}
         <div className="sidebar-clock" aria-label="当前时间">
           <strong>{formatClockTime(now)}</strong>
           <span>{formatClockDate(now)}</span>

@@ -182,6 +182,95 @@ button.mobile-sidebar-toggle {
   min-height: 0;
 }
 
+.sidebar-sign-out {
+  width: 100%;
+  margin: 10px 0 12px;
+}
+
+.auth-shell {
+  display: grid;
+  min-height: 100vh;
+  place-items: center;
+  padding: 24px;
+  background:
+    radial-gradient(circle at top, rgba(37, 99, 235, 0.12), transparent 34%),
+    linear-gradient(180deg, #f8fbff 0, var(--bg) 100%);
+}
+
+.auth-card {
+  width: min(100%, 420px);
+  padding: 30px;
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.96);
+  box-shadow: var(--shadow);
+}
+
+.auth-brand {
+  display: grid;
+  gap: 8px;
+  margin-bottom: 24px;
+}
+
+.auth-brand > span {
+  color: var(--primary);
+  font-size: 13px;
+  font-weight: 760;
+}
+
+.auth-brand h1 {
+  font-size: 28px;
+}
+
+.auth-brand p,
+.auth-loading {
+  color: var(--muted);
+}
+
+.auth-form {
+  display: grid;
+  gap: 16px;
+}
+
+.auth-form label {
+  display: grid;
+  gap: 7px;
+  color: #334155;
+  font-size: 14px;
+  font-weight: 680;
+}
+
+.auth-error {
+  margin: 0;
+}
+
+.auth-submit {
+  width: 100%;
+  justify-content: center;
+  margin-top: 2px;
+}
+
+.cloud-probe-debug {
+  position: fixed;
+  right: 16px;
+  bottom: 16px;
+  z-index: 90;
+  padding: 8px 11px;
+  border: 1px solid #bfdbfe;
+  border-radius: 999px;
+  background: #eff6ff;
+  color: #1d4ed8;
+  box-shadow: var(--shadow-soft);
+  font-size: 12px;
+  font-weight: 720;
+}
+
+.cloud-probe-debug.error {
+  border-color: #fecdd3;
+  background: #fff1f2;
+  color: #be123c;
+}
+
 .sidebar-collapse-button {
   position: absolute;
   top: 14px;
@@ -1924,6 +2013,43 @@ legend {
 
 .settings-card {
   padding: 16px;
+}
+
+.cloud-sync-panel {
+  display: grid;
+  gap: 12px;
+  border-color: #bfdbfe;
+  background: #f8fbff;
+}
+
+.cloud-sync-panel-head,
+.cloud-sync-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.cloud-sync-panel-head {
+  color: #1d4ed8;
+}
+
+.cloud-sync-panel-head h3,
+.cloud-sync-panel p {
+  margin: 0;
+}
+
+.cloud-sync-panel > span {
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.cloud-sync-panel .cloud-sync-last-saved {
+  color: #1d4ed8;
+  font-weight: 750;
+}
+
+.cloud-sync-actions {
+  flex-wrap: wrap;
 }
 
 .local-data-status-card {

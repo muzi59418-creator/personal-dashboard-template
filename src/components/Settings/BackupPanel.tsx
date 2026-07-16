@@ -1,4 +1,4 @@
-import { useRef, useState } from "react";
+import { useRef, useState, type ReactNode } from "react";
 import { Download, RotateCcw, Trash2, Upload } from "lucide-react";
 import type { DashboardData } from "../../types/dashboard";
 import { createBackupFileName, downloadJsonFile, validateDashboardBackupJson } from "../../utils/backupUtils";
@@ -10,9 +10,10 @@ interface BackupPanelProps {
   onExport: () => string;
   onImport: (payload: string | DashboardData) => DashboardData | undefined;
   onClear: () => void;
+  cloudSyncPanel?: ReactNode;
 }
 
-export function BackupPanel({ data, onExport, onImport, onClear }: BackupPanelProps) {
+export function BackupPanel({ data, onExport, onImport, onClear, cloudSyncPanel }: BackupPanelProps) {
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const [message, setMessage] = useState("");
   const [messageTone, setMessageTone] = useState<"success" | "error">("success");
@@ -96,6 +97,7 @@ export function BackupPanel({ data, onExport, onImport, onClear }: BackupPanelPr
           <span>当前版本不接入真实云端服务，也不写入账号、密码、API Key 或 token。</span>
         </article>
       </section>
+      {cloudSyncPanel}
       <section className="panel local-data-status-card">
         <div className="local-data-status-head">
           <h3>本地数据状态</h3>
