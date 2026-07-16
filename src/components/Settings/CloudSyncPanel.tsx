@@ -11,15 +11,29 @@ import {
 } from "../../data/cloudSync";
 import type { DashboardData } from "../../types/dashboard";
 import { createBackupFileName, downloadJsonFile, validateDashboardBackupData } from "../../utils/backupUtils";
+import type { AutoCloudSyncState } from "../../data/autoCloudSync";
 
 interface CloudSyncPanelProps {
   probe: CloudDashboardProbeResult;
   onInitialized: (record: CloudDashboardRecord) => void;
+  onCloudCommitted: () => void;
   onExport: () => string;
   onRestore: (data: DashboardData) => DashboardData | undefined;
+  autoSyncState: AutoCloudSyncState;
+  onAutoSyncToggle: (enabled: boolean) => void;
+  onAutoSyncRetry: () => void;
 }
 
-export function CloudSyncPanel({ probe, onInitialized, onExport, onRestore }: CloudSyncPanelProps) {
+export function CloudSyncPanel({
+  probe,
+  onInitialized,
+  onCloudCommitted,
+  onExport,
+  onRestore,
+  autoSyncState,
+  onAutoSyncToggle,
+  onAutoSyncRetry,
+}: CloudSyncPanelProps) {
   const [dismissed, setDismissed] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -47,6 +61,7 @@ export function CloudSyncPanel({ probe, onInitialized, onExport, onRestore }: Cl
     setMessage(result.metaSaved ? "云端初始化完成" : result.warning);
     setMessageTone("success");
     onInitialized(result.record);
+    onCloudCommitted();
   }
 
   async function restoreFromCloud() {
@@ -157,6 +172,7 @@ export function CloudSyncPanel({ probe, onInitialized, onExport, onRestore }: Cl
     }
 
     onInitialized(result.record);
+    onCloudCommitted();
     setLastSavedAt(result.record.updatedAt);
     setMessage(result.metaSaved ? `已保存到云端。最近保存：${formatCloudTime(result.record.updatedAt)}` : result.warning);
     setMessageTone("success");
@@ -175,6 +191,9 @@ export function CloudSyncPanel({ probe, onInitialized, onExport, onRestore }: Cl
   }
 
   if (probe.status === "cloud_exists") {
+    const autoSyncBlocked = autoSyncState.status === "conflict" || autoSyncState.status === "manual_review";
+    const manualActionsBlocked = saving || restoring || autoSyncState.status === "syncing";
+    const displayedLastSavedAt = autoSyncState.lastSyncedAt || lastSavedAt;
     return (
       <section className="panel cloud-sync-panel" aria-live="polite">
         <div className="cloud-sync-panel-head">
@@ -182,14 +201,46 @@ export function CloudSyncPanel({ probe, onInitialized, onExport, onRestore }: Cl
           <h3>云端数据管理</h3>
         </div>
         <p>云端已有当前账号的仪表板数据。</p>
-        <span>可手动保存本机数据，或从云端恢复。保存前会检查云端版本，当前仍不启用自动同步。</span>
-        {lastSavedAt && <span className="cloud-sync-last-saved">最近保存：{formatCloudTime(lastSavedAt)}</span>}
+        <span>可手动保存本机数据，或从云端恢复。保存前会检查云端版本。</span>
+        {displayedLastSavedAt && <span className="cloud-sync-last-saved">最近保存：{formatCloudTime(displayedLastSavedAt)}</span>}
+        <div className={`auto-cloud-sync-card ${autoSyncState.status}`}>
+          <div className="auto-cloud-sync-head">
+            <div>
+              <strong>自动保存到云端（仅上传）</strong>
+              <span>默认关闭，仅对当前设备生效；普通修改约 3 秒后合并上传，不会自动下载。</span>
+            </div>
+            <button
+              className={autoSyncState.enabled ? "primary-button" : "secondary-button"}
+              type="button"
+              aria-pressed={autoSyncState.enabled}
+              disabled={autoSyncBlocked || autoSyncState.status === "syncing"}
+              onClick={() => {
+                if (!autoSyncState.enabled) {
+                  const confirmed = window.confirm(
+                    "确认在当前设备开启自动保存到云端？普通修改会在约 3 秒后上传，但不会自动下载、导入或清空云端数据。",
+                  );
+                  if (!confirmed) return;
+                }
+                onAutoSyncToggle(!autoSyncState.enabled);
+              }}
+            >
+              {autoSyncState.enabled ? "已开启" : "已关闭"}
+            </button>
+          </div>
+          <span className="auto-cloud-sync-status">状态：{formatAutoSyncStatus(autoSyncState)}</span>
+          {autoSyncState.error && <p className="message-text error">{autoSyncState.error}</p>}
+          {autoSyncState.enabled && (autoSyncState.status === "offline" || autoSyncState.status === "error") && (
+            <button className="secondary-button auto-cloud-sync-retry" type="button" onClick={onAutoSyncRetry}>
+              立即重试
+            </button>
+          )}
+        </div>
         <div className="cloud-sync-actions">
-          <button className="primary-button" type="button" disabled={saving || restoring} onClick={() => void saveToCloud()}>
+          <button className="primary-button" type="button" disabled={manualActionsBlocked} onClick={() => void saveToCloud()}>
             <CloudUpload size={16} />
             {saving ? "正在检查并保存…" : "保存本机数据到云端"}
           </button>
-          <button className="secondary-button" type="button" disabled={saving || restoring} onClick={() => void restoreFromCloud()}>
+          <button className="secondary-button" type="button" disabled={manualActionsBlocked} onClick={() => void restoreFromCloud()}>
             <CloudDownload size={16} />
             {restoring ? "正在读取云端…" : "从云端恢复"}
           </button>
@@ -233,4 +284,18 @@ function formatCloudTime(value: string): string {
     minute: "2-digit",
     hour12: false,
   });
+}
+
+function formatAutoSyncStatus(state: AutoCloudSyncState): string {
+  const labels: Record<AutoCloudSyncState["status"], string> = {
+    disabled: "已关闭",
+    synced: state.lastSyncedAt ? `已同步（${formatCloudTime(state.lastSyncedAt)}）` : "已同步",
+    pending: "等待同步",
+    syncing: "正在同步",
+    offline: "设备离线，等待联网",
+    error: "同步失败，本地数据已保留",
+    conflict: "发现冲突，自动保存已停止",
+    manual_review: "需要人工确认",
+  };
+  return labels[state.status];
 }

@@ -2052,6 +2052,60 @@ legend {
   flex-wrap: wrap;
 }
 
+.auto-cloud-sync-card {
+  display: grid;
+  gap: 8px;
+  padding: 12px;
+  border: 1px solid #dbeafe;
+  border-radius: 10px;
+  background: #fff;
+}
+
+.auto-cloud-sync-card.conflict,
+.auto-cloud-sync-card.manual_review,
+.auto-cloud-sync-card.error {
+  border-color: #fecaca;
+  background: #fffafa;
+}
+
+.auto-cloud-sync-card.offline {
+  border-color: #fde68a;
+  background: #fffbeb;
+}
+
+.auto-cloud-sync-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.auto-cloud-sync-head > div {
+  display: grid;
+  gap: 4px;
+}
+
+.auto-cloud-sync-head span,
+.auto-cloud-sync-status {
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.auto-cloud-sync-status {
+  font-weight: 750;
+}
+
+.auto-cloud-sync-retry {
+  justify-self: start;
+}
+
+@media (max-width: 520px) {
+  .auto-cloud-sync-head {
+    align-items: stretch;
+    flex-direction: column;
+  }
+}
+
 .local-data-status-card {
   display: grid;
   gap: 12px;

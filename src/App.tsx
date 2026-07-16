@@ -74,7 +74,9 @@ import { WorkItemList } from "./components/WorkItems/WorkItemList";
 import type { StatRecord } from "./utils/stats";
 import { AuthGate } from "./components/Auth/AuthGate";
 import type { CloudDashboardProbeResult, CloudDashboardRecord } from "./data/cloudSync";
+import type { AutoCloudSyncChange } from "./data/autoCloudSync";
 import { isCloudModeEnabled } from "./lib/supabase";
+import { useAutoCloudSync } from "./hooks/useAutoCloudSync";
 
 function App() {
   if (!isCloudModeEnabled) return <DashboardApp />;
@@ -100,6 +102,7 @@ function DashboardApp({ onSignOut, cloudProbe, onCloudInitialized }: DashboardAp
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(() => readSidebarCollapsed());
   const [notice, setNotice] = useState("");
+  const autoCloudSync = useAutoCloudSync(Boolean(cloudProbe && onCloudInitialized), onCloudInitialized);
 
   function updateWorkWithProjectSync(id: string, input: WorkItemInput) {
     const before = getDashboardData().workItems.find((item) => item.id === id);
@@ -146,7 +149,10 @@ function DashboardApp({ onSignOut, cloudProbe, onCloudInitialized }: DashboardAp
       deleteWorkTemplateAction: (id: string) => runAction(() => deleteWorkTemplate(id), "工作模板已删除"),
       reorderWorkTemplateAction: (templateIds: string[]) => runAction(() => reorderWorkTemplates(templateIds), "模板顺序已保存"),
       generateRoutineWorkAction: () => {
-        const result = runAction(() => syncRoutineWorkForDate(), "例行工作已检查同步");
+        const result = runAction(() => syncRoutineWorkForDate(), "例行工作已检查同步", "none");
+        if (result && (result.created.length > 0 || result.updated.length > 0)) {
+          autoCloudSync.notifyLocalChange("regular");
+        }
         if (result?.warnings.length) {
           setNotice(result.warnings[0]);
           window.setTimeout(() => setNotice(""), 4200);
@@ -170,8 +176,9 @@ function DashboardApp({ onSignOut, cloudProbe, onCloudInitialized }: DashboardAp
       updateCategoryAction: (id: string, input: CategoryInput) => runAction(() => updateCategory(id, input), "分类已更新"),
       deleteCategoryAction: (id: string) => runAction(() => deleteCategory(id), "分类已删除"),
       updateWorkResponsibilitiesAction: (groups: WorkResponsibilityGroupInput[]) => runAction(() => updateWorkResponsibilities(groups), "工作职责已保存"),
-      importDashboard: (payload: string | DashboardData) => runAction(() => importData(payload), "数据已导入"),
-      clearDashboard: () => runAction(() => clearData(), "本地数据已清空"),
+      importDashboard: (payload: string | DashboardData) => runAction(() => importData(payload), "数据已导入", "manual_review"),
+      restoreCloudDashboard: (payload: string | DashboardData) => runAction(() => importData(payload), "云端数据已恢复", "cloud_restore"),
+      clearDashboard: () => runAction(() => clearData(), "本地数据已清空", "manual_review"),
     }),
     [],
   );
@@ -182,7 +189,10 @@ function DashboardApp({ onSignOut, cloudProbe, onCloudInitialized }: DashboardAp
       const today = todayInputValue();
       const result = syncRoutineWorkForDate(today);
       checkedDate = today;
-      if (result.created.length > 0 || result.updated.length > 0) setData(getDashboardData());
+      if (result.created.length > 0 || result.updated.length > 0) {
+        setData(getDashboardData());
+        autoCloudSync.notifyLocalChange("regular");
+      }
       if (result.warnings.length > 0) {
         setNotice(result.warnings[0]);
         window.setTimeout(() => setNotice(""), 4200);
@@ -203,10 +213,11 @@ function DashboardApp({ onSignOut, cloudProbe, onCloudInitialized }: DashboardAp
     };
   }, []);
 
-  function runAction<T>(work: () => T, successMessage: string): T | undefined {
+  function runAction<T>(work: () => T, successMessage: string, syncChange: AutoCloudSyncChange | "none" = "regular"): T | undefined {
     try {
       const result = work();
       setData(getDashboardData());
+      if (syncChange !== "none") autoCloudSync.notifyLocalChange(syncChange);
       setNotice(successMessage);
       window.setTimeout(() => setNotice(""), 2400);
       return result;
@@ -339,8 +350,12 @@ function DashboardApp({ onSignOut, cloudProbe, onCloudInitialized }: DashboardAp
                   <CloudSyncPanel
                     probe={cloudProbe}
                     onInitialized={onCloudInitialized}
+                    onCloudCommitted={autoCloudSync.acceptManualCloudCommit}
                     onExport={exportData}
-                    onRestore={actions.importDashboard}
+                    onRestore={actions.restoreCloudDashboard}
+                    autoSyncState={autoCloudSync.state}
+                    onAutoSyncToggle={autoCloudSync.setEnabled}
+                    onAutoSyncRetry={autoCloudSync.retry}
                   />
                 ) : undefined
               }

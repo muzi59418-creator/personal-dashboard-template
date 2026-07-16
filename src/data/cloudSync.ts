@@ -58,7 +58,6 @@ export async function getCloudDashboardData(): Promise<CloudDashboardProbeResult
     if (!data) return { status: "cloud_empty", cloudExists: false, record: null };
 
     const record = toCloudDashboardRecord(data as CloudDashboardRow);
-    recordCloudRead(record.updatedAt);
     return {
       status: "cloud_exists",
       cloudExists: true,
@@ -217,17 +216,6 @@ function createCloudSaveConflict(message: string, record?: CloudDashboardRecord)
 
 function toCloudDashboardRecord(row: CloudDashboardRow): CloudDashboardRecord {
   return { data: row.data, dataVersion: row.data_version, updatedAt: row.updated_at };
-}
-
-function recordCloudRead(updatedAt: string): void {
-  const current = getCloudSyncMeta();
-  persistCloudSyncMeta({
-    lastSyncAt: current?.lastSyncAt || "",
-    lastCloudReadAt: new Date().toISOString(),
-    lastCloudUpdatedAt: updatedAt,
-    syncStatus: current?.syncStatus || "initialized",
-    cloudInitialized: true,
-  });
 }
 
 function persistCloudSyncMeta(meta: CloudSyncMeta): boolean {
