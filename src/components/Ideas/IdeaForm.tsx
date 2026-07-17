@@ -54,11 +54,11 @@ export function IdeaForm({ idea, projects, onCancel, onSubmit }: IdeaFormProps) 
     <form className="form-stack" onSubmit={submit}>
       <label>
         标题
-        <input value={title} onChange={(event) => setTitle(event.target.value)} placeholder="例如：落地页优化想法" />
+        <input value={title} onChange={(event) => setTitle(event.target.value)} placeholder="例如：落地页优化灵感" />
       </label>
       <label>
         正文内容
-        <textarea value={content} onChange={(event) => setContent(event.target.value)} rows={6} placeholder="写下想法、截图说明或待整理内容" />
+        <textarea value={content} onChange={(event) => setContent(event.target.value)} rows={6} placeholder="写下灵感、截图说明或待整理内容" />
       </label>
       <div className="form-grid">
         <label>

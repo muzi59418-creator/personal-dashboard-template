@@ -38,13 +38,13 @@ const templateWorkResponsibilities: WorkResponsibilityGroup[] = [
   },
   {
     id: "resp_idea_capture",
-    name: "想法收集",
+    name: "灵感收集",
     sortOrder: 40,
     items: [
-      "随时记录临时想法和待整理内容",
-      "将可执行想法转化为任务或日记",
-      "定期归档已处理或暂不处理的想法",
-      "避免让零散想法影响当前重点任务",
+      "随时记录灵感和待整理内容",
+      "将可执行灵感转化为任务或日记",
+      "定期归档已处理或暂不处理的灵感",
+      "避免让零散灵感影响当前重点任务",
     ],
   },
 ];

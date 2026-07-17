@@ -61,7 +61,7 @@ export function calculateStats(data: DashboardData): DashboardStats {
       todayRecords: [
         { title: "工作日记", records: todayDiary.map(toDiaryRecord) },
         { title: "工作内容", records: todayWork.map(toWorkRecord) },
-        { title: "临时想法 / 图文记录", records: todayIdeas.map(toIdeaRecord) },
+        { title: "灵感 / 图文记录", records: todayIdeas.map(toIdeaRecord) },
       ],
       weeklyWork: [{ title: "本周新增或更新的工作内容", records: weeklyWork.map(toWorkRecord) }],
       weeklyCompleted: [{ title: "本周完成的工作内容", records: weeklyCompleted.map(toWorkRecord) }],
@@ -112,7 +112,7 @@ function toIdeaRecord(idea: Idea): StatRecord {
   return {
     id: idea.id,
     kind: "idea",
-    title: idea.title || idea.content.slice(0, 36) || (idea.attachments?.length ? "未命名图文记录" : "未命名临时想法"),
+    title: idea.title || idea.content.slice(0, 36) || (idea.attachments?.length ? "未命名图文记录" : "未命名灵感"),
     status: idea.status === "unorganized" ? "未整理" : idea.status === "organized" ? "已整理" : idea.status === "converted" ? "已转化" : "已归档",
   };
 }

@@ -291,7 +291,7 @@ function compactImages(images?: string[], extra?: string) {
 function makeIdeaTitle(content: string, hasImage: boolean) {
   const text = content.trim();
   if (text) return text.slice(0, 24);
-  return hasImage ? "未命名图文记录" : "未命名临时想法";
+  return hasImage ? "未命名图文记录" : "未命名灵感";
 }
 
 function normalizeIdeaStatus(status?: string): Idea["status"] {

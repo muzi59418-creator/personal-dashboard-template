@@ -441,7 +441,7 @@ export function updateIdea(id: string, input: IdeaInput): Idea {
     updated = { ...idea, ...input, updatedAt: new Date().toISOString() };
     return updated;
   });
-  if (!updated) throw new Error("没有找到要编辑的临时想法。");
+  if (!updated) throw new Error("没有找到要编辑的灵感。");
   save(data);
   return updated;
 }
@@ -463,7 +463,7 @@ export function convertIdeaToWorkItem(id: string, input: WorkItemInput): { idea:
     updatedIdea = { ...idea, status: "converted", convertedToType: "work", convertedToId: workItem.id, updatedAt: now };
     return updatedIdea;
   });
-  if (!updatedIdea) throw new Error("没有找到要转化的临时想法。");
+  if (!updatedIdea) throw new Error("没有找到要转化的灵感。");
   save(data);
   return { idea: updatedIdea, workItem };
 }
@@ -479,7 +479,7 @@ export function convertIdeaToDiaryEntry(id: string, input: DiaryEntryInput): { i
     updatedIdea = { ...idea, status: "converted", convertedToType: "diary", convertedToId: diaryEntry.id, updatedAt: now };
     return updatedIdea;
   });
-  if (!updatedIdea) throw new Error("没有找到要转化的临时想法。");
+  if (!updatedIdea) throw new Error("没有找到要转化的灵感。");
   save(data);
   return { idea: updatedIdea, diaryEntry };
 }

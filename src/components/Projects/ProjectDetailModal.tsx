@@ -457,7 +457,7 @@ export function ProjectDetailModal({
                     updatedAt: entry.updatedAt,
                     kind: "diary" as const,
                   }))} onOpen={onOpenLinkedRecord} />
-                  <RelatedGroup title="关联灵感 / 临时想法" records={relatedIdeas.map((idea) => ({
+                  <RelatedGroup title="关联灵感" records={relatedIdeas.map((idea) => ({
                     id: idea.id,
                     title: idea.title || idea.content.slice(0, 24) || "未命名图文记录",
                     status: idea.status === "unorganized" ? "未整理" : idea.status === "organized" ? "已整理" : idea.status === "converted" ? "已转化" : "已归档",

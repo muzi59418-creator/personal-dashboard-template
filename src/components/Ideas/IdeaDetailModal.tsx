@@ -47,10 +47,10 @@ export function IdeaDetailModal({
       return;
     }
     onConvertToWork({
-      title: idea.title || "由想法转化的工作内容",
+      title: idea.title || "由灵感转化的工作内容",
       categoryId,
       status: WORK_STATUSES[0],
-      content: idea.content || idea.title || "由想法转化的工作内容",
+      content: idea.content || idea.title || "由灵感转化的工作内容",
       date: todayInputValue(),
       projectId: idea.projectId || "",
       images,
@@ -60,8 +60,8 @@ export function IdeaDetailModal({
   function convertToDiary() {
     onConvertToDiary({
       date: todayInputValue(),
-      title: idea.title || "由想法转化的工作日记",
-      content: idea.content || idea.title || "由想法转化的工作日记",
+      title: idea.title || "由灵感转化的工作日记",
+      content: idea.content || idea.title || "由灵感转化的工作日记",
       tags: idea.tags || [],
       linkedProjectIds: idea.projectId ? [idea.projectId] : [],
       images,
