@@ -83,20 +83,21 @@ function App() {
 
   return (
     <AuthGate>
-      {({ onSignOut, cloudProbe, onCloudInitialized }) => (
-        <DashboardApp onSignOut={onSignOut} cloudProbe={cloudProbe} onCloudInitialized={onCloudInitialized} />
+      {({ accountName, onSignOut, cloudProbe, onCloudInitialized }) => (
+        <DashboardApp accountName={accountName} onSignOut={onSignOut} cloudProbe={cloudProbe} onCloudInitialized={onCloudInitialized} />
       )}
     </AuthGate>
   );
 }
 
 interface DashboardAppProps {
+  accountName?: string;
   onSignOut?: () => Promise<void>;
   cloudProbe?: CloudDashboardProbeResult;
   onCloudInitialized?: (record: CloudDashboardRecord) => void;
 }
 
-function DashboardApp({ onSignOut, cloudProbe, onCloudInitialized }: DashboardAppProps) {
+function DashboardApp({ accountName, onSignOut, cloudProbe, onCloudInitialized }: DashboardAppProps) {
   const [data, setData] = useState<DashboardData>(() => getDashboardData());
   const [activeView, setActiveView] = useState<ViewKey>("dashboard");
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
@@ -253,6 +254,7 @@ function DashboardApp({ onSignOut, cloudProbe, onCloudInitialized }: DashboardAp
           onNavigate={navigate}
           onToggleCollapsed={toggleSidebarCollapsed}
           onClose={() => setMobileMenuOpen(false)}
+          accountName={accountName}
           onSignOut={onSignOut}
         />
         <main className="main-content">

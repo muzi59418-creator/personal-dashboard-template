@@ -184,7 +184,52 @@ button.mobile-sidebar-toggle {
 
 .sidebar-sign-out {
   width: 100%;
-  margin: 10px 0 12px;
+  margin: 4px 0 12px;
+}
+
+.sidebar-account {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  width: 100%;
+  min-width: 0;
+  margin-top: 10px;
+  padding: 7px 10px;
+  color: #334155;
+}
+
+.sidebar-account-avatar {
+  display: inline-flex;
+  flex: 0 0 30px;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  border: 1px solid rgba(96, 165, 250, 0.24);
+  border-radius: 50%;
+  background: linear-gradient(145deg, #dbeafe, #ecfeff);
+  color: #1d4ed8;
+  font-size: 13px;
+  font-weight: 820;
+}
+
+.sidebar-account-name {
+  min-width: 0;
+  overflow: hidden;
+  font-size: 13px;
+  font-weight: 680;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.sidebar-collapsed .sidebar-account {
+  justify-content: center;
+  padding-right: 0;
+  padding-left: 0;
+}
+
+.sidebar-collapsed .sidebar-account-name {
+  display: none;
 }
 
 .auth-shell {
@@ -743,27 +788,19 @@ button.mobile-sidebar-toggle {
   color: #94a3b8;
 }
 
-.compact-empty-state .empty-state {
-  min-height: 56px;
-  padding: 12px;
-  background: var(--surface-strong);
-}
-
-.today-routine-empty .empty-state {
-  grid-template-rows: auto auto;
-  align-content: center;
-  justify-items: center;
-  gap: 6px;
-  min-height: 56px;
-  padding: 8px 12px;
-}
-
-.today-workbench-empty {
+.today-workbench-empty,
+.diary-preview-empty {
   margin: 0;
   padding: 2px;
   color: var(--muted);
   font-size: 13px;
   line-height: 1.5;
+}
+
+.today-work-panel-empty,
+.diary-preview-panel-empty {
+  align-self: start;
+  min-height: 0;
 }
 
 .project-action-list {
@@ -4159,8 +4196,15 @@ legend {
 
   .sidebar-collapsed .nav-button span,
   .sidebar-collapsed .sidebar-note span,
-  .sidebar-collapsed .sidebar-clock span {
+  .sidebar-collapsed .sidebar-clock span,
+  .sidebar-collapsed .sidebar-account-name {
     display: inline;
+  }
+
+  .sidebar-collapsed .sidebar-account {
+    justify-content: flex-start;
+    padding-right: 10px;
+    padding-left: 10px;
   }
 
   .sidebar-collapsed .sidebar-note {

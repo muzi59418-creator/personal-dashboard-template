@@ -1,5 +1,5 @@
 import { useEffect, useState, type ReactNode } from "react";
-import type { Session } from "@supabase/supabase-js";
+import type { Session, User } from "@supabase/supabase-js";
 import {
   getCloudSyncMeta,
   getCloudDashboardData,
@@ -10,6 +10,7 @@ import { supabase } from "../../lib/supabase";
 import { LoginPage } from "./LoginPage";
 
 export interface AuthenticatedCloudContext {
+  accountName: string;
   onSignOut: () => Promise<void>;
   cloudProbe: CloudDashboardProbeResult;
   onCloudInitialized: (record: CloudDashboardRecord) => void;
@@ -96,12 +97,19 @@ export function AuthGate({ children }: AuthGateProps) {
     <>
       {import.meta.env.DEV && <CloudProbeDebugStatus result={resolvedCloudProbe} />}
       {children({
+        accountName: getAccountName(session.user),
         onSignOut: signOut,
         cloudProbe: resolvedCloudProbe,
         onCloudInitialized: (record) => setCloudProbe({ status: "cloud_exists", cloudExists: true, record }),
       })}
     </>
   );
+}
+
+export function getAccountName(user: User): string {
+  const metadata = user.user_metadata || {};
+  const candidates = [metadata.display_name, metadata.full_name, metadata.name, metadata.username, metadata.user_name, user.email];
+  return candidates.find((value): value is string => typeof value === "string" && value.trim().length > 0)?.trim() || "已登录账号";
 }
 
 function CloudProbeDebugStatus({ result }: { result: CloudDashboardProbeResult }) {

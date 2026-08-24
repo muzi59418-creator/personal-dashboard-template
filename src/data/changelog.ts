@@ -11,6 +11,15 @@ export interface ChangelogEntry {
 
 export const changelogEntries: ChangelogEntry[] = [
   {
+    date: "2026-08-20",
+    title: "v1.5.0 首页信息密度与账号状态优化",
+    type: "功能优化",
+    modules: ["首页", "侧边栏", "今日工作台", "工作日记"],
+    summary:
+      "侧栏底部展示当前登录账号首字和名称，长名称自动省略且折叠后只保留首字；今日例行改为与优先处理、项目推进一致的轻量单行空状态；首页工作日记只显示最近 3 个自然日内的记录并按日期倒序，完整历史仍可通过查看全部访问。本次不改历史数据、localStorage 或 schemaVersion。",
+    status: "待提交",
+  },
+  {
     date: "2026-07-14",
     title: "v1.4.4 首页工作台体验优化",
     type: "功能优化",
