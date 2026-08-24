@@ -30,10 +30,11 @@ export function WorkPreview({ categories, items, projects, onOpenWork, onOpenPro
   const pendingRoutineItems = todayRoutineItems.filter((item) => isActionableStatus(item) && !item.routineSkipped);
   const completedTodayItems = getCompletedTodayItems(items, today);
   const projectActions = getProjectActions(projects);
+  const isWorkbenchEmpty = visiblePriorityItems.length === 0 && pendingRoutineItems.length === 0 && projectActions.length === 0;
 
   return (
     <>
-      <section className="panel dashboard-equal-panel today-work-panel">
+      <section className={`panel dashboard-equal-panel today-work-panel${isWorkbenchEmpty ? " today-work-panel-empty" : ""}`}>
         <div className="section-head">
           <div>
             <h2>今日工作台</h2>
@@ -82,9 +83,7 @@ export function WorkPreview({ categories, items, projects, onOpenWork, onOpenPro
             <span>{pendingRoutineItems.length} 条</span>
           </div>
           {pendingRoutineItems.length === 0 ? (
-            <div className="compact-empty-state today-routine-empty">
-              <EmptyState title="今日暂无待处理的例行工作" description="" />
-            </div>
+            <p className="today-workbench-empty">暂无待处理例行工作</p>
           ) : (
             <div className="today-work-list">
               {pendingRoutineItems.map((item, index) => (

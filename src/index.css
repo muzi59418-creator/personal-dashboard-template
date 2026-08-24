@@ -182,6 +182,140 @@ button.mobile-sidebar-toggle {
   min-height: 0;
 }
 
+.sidebar-sign-out {
+  width: 100%;
+  margin: 4px 0 12px;
+}
+
+.sidebar-account {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  width: 100%;
+  min-width: 0;
+  margin-top: 10px;
+  padding: 7px 10px;
+  color: #334155;
+}
+
+.sidebar-account-avatar {
+  display: inline-flex;
+  flex: 0 0 30px;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  border: 1px solid rgba(96, 165, 250, 0.24);
+  border-radius: 50%;
+  background: linear-gradient(145deg, #dbeafe, #ecfeff);
+  color: #1d4ed8;
+  font-size: 13px;
+  font-weight: 820;
+}
+
+.sidebar-account-name {
+  min-width: 0;
+  overflow: hidden;
+  font-size: 13px;
+  font-weight: 680;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.sidebar-collapsed .sidebar-account {
+  justify-content: center;
+  padding-right: 0;
+  padding-left: 0;
+}
+
+.sidebar-collapsed .sidebar-account-name {
+  display: none;
+}
+
+.auth-shell {
+  display: grid;
+  min-height: 100vh;
+  place-items: center;
+  padding: 24px;
+  background:
+    radial-gradient(circle at top, rgba(37, 99, 235, 0.12), transparent 34%),
+    linear-gradient(180deg, #f8fbff 0, var(--bg) 100%);
+}
+
+.auth-card {
+  width: min(100%, 420px);
+  padding: 30px;
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.96);
+  box-shadow: var(--shadow);
+}
+
+.auth-brand {
+  display: grid;
+  gap: 8px;
+  margin-bottom: 24px;
+}
+
+.auth-brand > span {
+  color: var(--primary);
+  font-size: 13px;
+  font-weight: 760;
+}
+
+.auth-brand h1 {
+  font-size: 28px;
+}
+
+.auth-brand p,
+.auth-loading {
+  color: var(--muted);
+}
+
+.auth-form {
+  display: grid;
+  gap: 16px;
+}
+
+.auth-form label {
+  display: grid;
+  gap: 7px;
+  color: #334155;
+  font-size: 14px;
+  font-weight: 680;
+}
+
+.auth-error {
+  margin: 0;
+}
+
+.auth-submit {
+  width: 100%;
+  justify-content: center;
+  margin-top: 2px;
+}
+
+.cloud-probe-debug {
+  position: fixed;
+  right: 16px;
+  bottom: 16px;
+  z-index: 90;
+  padding: 8px 11px;
+  border: 1px solid #bfdbfe;
+  border-radius: 999px;
+  background: #eff6ff;
+  color: #1d4ed8;
+  box-shadow: var(--shadow-soft);
+  font-size: 12px;
+  font-weight: 720;
+}
+
+.cloud-probe-debug.error {
+  border-color: #fecdd3;
+  background: #fff1f2;
+  color: #be123c;
+}
+
 .sidebar-collapse-button {
   position: absolute;
   top: 14px;
@@ -654,27 +788,19 @@ button.mobile-sidebar-toggle {
   color: #94a3b8;
 }
 
-.compact-empty-state .empty-state {
-  min-height: 56px;
-  padding: 12px;
-  background: var(--surface-strong);
-}
-
-.today-routine-empty .empty-state {
-  grid-template-rows: auto auto;
-  align-content: center;
-  justify-items: center;
-  gap: 6px;
-  min-height: 56px;
-  padding: 8px 12px;
-}
-
-.today-workbench-empty {
+.today-workbench-empty,
+.diary-preview-empty {
   margin: 0;
   padding: 2px;
   color: var(--muted);
   font-size: 13px;
   line-height: 1.5;
+}
+
+.today-work-panel-empty,
+.diary-preview-panel-empty {
+  align-self: start;
+  min-height: 0;
 }
 
 .project-action-list {
@@ -1924,6 +2050,97 @@ legend {
 
 .settings-card {
   padding: 16px;
+}
+
+.cloud-sync-panel {
+  display: grid;
+  gap: 12px;
+  border-color: #bfdbfe;
+  background: #f8fbff;
+}
+
+.cloud-sync-panel-head,
+.cloud-sync-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.cloud-sync-panel-head {
+  color: #1d4ed8;
+}
+
+.cloud-sync-panel-head h3,
+.cloud-sync-panel p {
+  margin: 0;
+}
+
+.cloud-sync-panel > span {
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.cloud-sync-panel .cloud-sync-last-saved {
+  color: #1d4ed8;
+  font-weight: 750;
+}
+
+.cloud-sync-actions {
+  flex-wrap: wrap;
+}
+
+.auto-cloud-sync-card {
+  display: grid;
+  gap: 8px;
+  padding: 12px;
+  border: 1px solid #dbeafe;
+  border-radius: 10px;
+  background: #fff;
+}
+
+.auto-cloud-sync-card.conflict,
+.auto-cloud-sync-card.manual_review,
+.auto-cloud-sync-card.error {
+  border-color: #fecaca;
+  background: #fffafa;
+}
+
+.auto-cloud-sync-card.offline {
+  border-color: #fde68a;
+  background: #fffbeb;
+}
+
+.auto-cloud-sync-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.auto-cloud-sync-head > div {
+  display: grid;
+  gap: 4px;
+}
+
+.auto-cloud-sync-head span,
+.auto-cloud-sync-status {
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.auto-cloud-sync-status {
+  font-weight: 750;
+}
+
+.auto-cloud-sync-retry {
+  justify-self: start;
+}
+
+@media (max-width: 520px) {
+  .auto-cloud-sync-head {
+    align-items: stretch;
+    flex-direction: column;
+  }
 }
 
 .local-data-status-card {
@@ -3979,8 +4196,15 @@ legend {
 
   .sidebar-collapsed .nav-button span,
   .sidebar-collapsed .sidebar-note span,
-  .sidebar-collapsed .sidebar-clock span {
+  .sidebar-collapsed .sidebar-clock span,
+  .sidebar-collapsed .sidebar-account-name {
     display: inline;
+  }
+
+  .sidebar-collapsed .sidebar-account {
+    justify-content: flex-start;
+    padding-right: 10px;
+    padding-left: 10px;
   }
 
   .sidebar-collapsed .sidebar-note {

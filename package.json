@@ -1,7 +1,7 @@
 {
   "name": "personal-dashboard-template",
   "private": true,
-  "version": "1.4.4",
+  "version": "1.5.0",
   "type": "module",
   "scripts": {
     "dev": "vite",
@@ -9,9 +9,12 @@
     "lint": "tsc -b --pretty false",
     "preview": "vite preview",
     "test:project": "node tests/projectProgress.test.mjs",
-    "test:routine": "node scripts/run-routine-tests.mjs"
+    "test:routine": "node scripts/run-routine-tests.mjs",
+    "test:dashboard": "node scripts/run-dashboard-tests.mjs",
+    "test:sync": "node scripts/run-auto-sync-tests.mjs"
   },
   "dependencies": {
+    "@supabase/supabase-js": "^2.110.5",
     "@vitejs/plugin-react": "^5.0.0",
     "lucide-react": "^0.468.0",
     "react": "^18.3.1",

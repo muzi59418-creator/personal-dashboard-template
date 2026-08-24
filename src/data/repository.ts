@@ -307,9 +307,12 @@ export function generateTodayRoutineWork(date = todayInputValue()): WorkItem[] {
 
 export function syncRoutineWorkForDate(date = todayInputValue()): { created: WorkItem[]; updated: WorkItem[]; warnings: string[] } {
   const data = readDashboard();
+  let templatesChanged = false;
   data.routineWorkTemplates = data.routineWorkTemplates.map((template) => {
     const recovered = getAutoRecoveredTemplate(template, date);
-    return recovered === template ? template : { ...recovered, updatedAt: new Date().toISOString() };
+    if (recovered === template) return template;
+    templatesChanged = true;
+    return { ...recovered, updatedAt: new Date().toISOString() };
   });
   const plan = createRoutineGenerationPlan(data.routineWorkTemplates, date);
   const now = new Date().toISOString();
@@ -326,6 +329,12 @@ export function syncRoutineWorkForDate(date = todayInputValue()): { created: Wor
         routineOriginalDate: trigger.originalDate,
         routineHolidayPostponed: trigger.holidayPostponed,
       });
+      const traceChanged =
+        merged.routineMerged !== existing.routineMerged ||
+        merged.routineHolidayPostponed !== existing.routineHolidayPostponed ||
+        merged.routineManualPostponed !== existing.routineManualPostponed ||
+        JSON.stringify(merged.routineMergedTriggerDates || []) !== JSON.stringify(existing.routineMergedTriggerDates || []);
+      if (!traceChanged) return;
       data.workItems = data.workItems.map((item) => (item.id === existing.id ? { ...merged, updatedAt: now } : item));
       updated.push({ ...merged, updatedAt: now });
       return;
@@ -361,7 +370,7 @@ export function syncRoutineWorkForDate(date = todayInputValue()): { created: Wor
   });
 
   if (created.length > 0) data.workItems = [...created, ...data.workItems];
-  save(data);
+  if (templatesChanged || created.length > 0 || updated.length > 0) save(data);
   return { created, updated, warnings: plan.warnings };
 }
 

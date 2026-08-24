@@ -1,6 +1,6 @@
 import type { DiaryEntry, Project } from "../../types/dashboard";
-import { formatDate, formatDateTime, formatWeekday, sortByDateDesc } from "../../utils/date";
-import { EmptyState } from "../Common/EmptyState";
+import { formatDate, formatDateTime, formatWeekday } from "../../utils/date";
+import { getRecentDiaryEntries } from "../../utils/diaryPreview";
 
 interface DiaryPreviewProps {
   entries: DiaryEntry[];
@@ -10,10 +10,10 @@ interface DiaryPreviewProps {
 
 export function DiaryPreview({ entries, projects, onViewAll }: DiaryPreviewProps) {
   const projectMap = new Map(projects.map((project) => [project.id, project.name]));
-  const latestEntries = sortByDateDesc(entries).slice(0, 3);
+  const recentEntries = getRecentDiaryEntries(entries);
 
   return (
-    <section className="panel dashboard-equal-panel diary-preview-panel">
+    <section className={`panel dashboard-equal-panel diary-preview-panel${recentEntries.length === 0 ? " diary-preview-panel-empty" : ""}`}>
       <div className="section-head">
         <div>
           <h2>工作日记</h2>
@@ -22,11 +22,11 @@ export function DiaryPreview({ entries, projects, onViewAll }: DiaryPreviewProps
           查看全部
         </button>
       </div>
-      {latestEntries.length === 0 ? (
-        <EmptyState title="还没有日记" description="记录第一条工作进展后，这里会显示最近内容。" />
+      {recentEntries.length === 0 ? (
+        <p className="diary-preview-empty">最近 3 天暂无工作日记</p>
       ) : (
         <div className="preview-list">
-          {latestEntries.map((entry) => (
+          {recentEntries.map((entry) => (
             <article className="preview-row diary-preview-row" key={entry.id}>
               <div>
                 <div className="preview-title-line">
