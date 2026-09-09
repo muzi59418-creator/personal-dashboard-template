@@ -10,6 +10,8 @@ import type {
   IdeaInput,
   Project,
   ProjectInput,
+  ProjectQuadrant,
+  ProjectStep,
   RoutineWorkTemplate,
   RoutineWorkTemplateInput,
   WorkTemplate,
@@ -29,6 +31,15 @@ import {
   isRoutineItem,
   mergeRoutineTrace,
 } from "./routineScheduler";
+import {
+  canMoveProject,
+  getProjectChildren,
+  getProjectDepth,
+  getProjectDescendantIds,
+  getRootProject,
+  getRootProjects,
+  MAX_PROJECT_DEPTH,
+} from "../utils/projectTree";
 
 // 当前实现基于 localStorage，后续可替换为 Supabase / Cloudflare D1 / Firebase。
 // 页面层只调用 repository，不直接读写 localStorage，方便未来迁移云端数据库和文件存储。
@@ -496,7 +507,26 @@ export function convertIdeaToDiaryEntry(id: string, input: DiaryEntryInput): { i
 export function createProject(input: ProjectInput): Project {
   const data = readDashboard();
   const now = new Date().toISOString();
-  const project: Project = { ...input, id: createId("project"), createdAt: now, updatedAt: now };
+  const parentId = input.parentId || null;
+  const parent = parentId ? data.projects.find((item) => item.id === parentId) : undefined;
+  if (parentId && !parent) throw new Error("没有找到上级项目。");
+  if (parent && getProjectDepth(parent, data.projects) >= MAX_PROJECT_DEPTH) throw new Error("项目最多支持 5 级层级。");
+  const root = parent ? getRootProject(parent, data.projects) : undefined;
+  const siblings = parent ? getProjectChildren(data.projects, parent.id) : getRootProjects(data.projects);
+  const project: Project = {
+    ...input,
+    id: createId("project"),
+    parentId,
+    rootProjectId: root?.id,
+    depth: parent ? getProjectDepth(parent, data.projects) + 1 : 1,
+    quadrant: parent ? root?.quadrant || "important_not_urgent" : input.quadrant || "important_not_urgent",
+    isDelayed: input.isDelayed === true,
+    status: "未开始",
+    sortOrder: getNextProjectSortOrder(siblings),
+    createdAt: now,
+    updatedAt: now,
+  };
+  project.rootProjectId = root?.id || project.id;
   data.projects = [project, ...data.projects];
   save(data);
   return project;
@@ -507,7 +537,17 @@ export function updateProject(id: string, input: ProjectInput): Project {
   let updated: Project | undefined;
   data.projects = data.projects.map((project) => {
     if (project.id !== id) return project;
-    updated = { ...project, ...input, updatedAt: new Date().toISOString() };
+    const root = getRootProject(project, data.projects);
+    updated = {
+      ...project,
+      ...input,
+      parentId: project.parentId || null,
+      rootProjectId: project.rootProjectId || root.id,
+      depth: project.depth || getProjectDepth(project, data.projects),
+      quadrant: project.parentId ? root.quadrant : input.quadrant || project.quadrant || "important_not_urgent",
+      isDelayed: input.isDelayed === true,
+      updatedAt: new Date().toISOString(),
+    };
     return updated;
   });
   if (!updated) throw new Error("没有找到要编辑的项目。");
@@ -517,20 +557,21 @@ export function updateProject(id: string, input: ProjectInput): Project {
 
 export function deleteProject(id: string): void {
   const data = readDashboard();
-  data.projects = data.projects.filter((project) => project.id !== id);
+  const removedIds = new Set([id, ...getProjectDescendantIds(id, data.projects)]);
+  data.projects = data.projects.filter((project) => !removedIds.has(project.id));
   data.diaryEntries = data.diaryEntries.map((entry) => ({
     ...entry,
-    linkedProjectIds: entry.linkedProjectIds.filter((projectId) => projectId !== id),
+    linkedProjectIds: entry.linkedProjectIds.filter((projectId) => !removedIds.has(projectId)),
   }));
   data.workItems = data.workItems.map((item) => ({
     ...item,
-    projectId: item.projectId === id ? "" : item.projectId,
-    linkedProjectIds: item.linkedProjectIds?.filter((projectId) => projectId !== id),
+    projectId: removedIds.has(item.projectId) ? "" : item.projectId,
+    linkedProjectIds: item.linkedProjectIds?.filter((projectId) => !removedIds.has(projectId)),
   }));
   data.ideas = data.ideas.map((idea) => ({
     ...idea,
-    projectId: idea.projectId === id ? "" : idea.projectId,
-    linkedProjectIds: idea.linkedProjectIds?.filter((projectId) => projectId !== id),
+    projectId: idea.projectId && removedIds.has(idea.projectId) ? "" : idea.projectId,
+    linkedProjectIds: idea.linkedProjectIds?.filter((projectId) => !removedIds.has(projectId)),
   }));
   save(data);
 }
@@ -544,6 +585,137 @@ export function reorderProjects(projectIds: string[]): Project[] {
   }));
   save(data);
   return data.projects;
+}
+
+export function reorderProjectNodes(parentId: string | null, projectIds: string[]): Project[] {
+  const data = readDashboard();
+  const siblings = parentId ? getProjectChildren(data.projects, parentId) : getRootProjects(data.projects);
+  const siblingIds = new Set(siblings.map((project) => project.id));
+  if (projectIds.some((id) => !siblingIds.has(id)) || projectIds.length !== siblings.length) throw new Error("项目排序范围无效。");
+  const orderMap = new Map(projectIds.map((id, index) => [id, (index + 1) * 10]));
+  data.projects = data.projects.map((project) => (orderMap.has(project.id) ? { ...project, sortOrder: orderMap.get(project.id) } : project));
+  save(data);
+  return data.projects;
+}
+
+export function moveProjectNode(id: string, targetParentId: string | null, position: "first" | "last" = "last"): Project[] {
+  const data = readDashboard();
+  const project = data.projects.find((item) => item.id === id);
+  if (!project) throw new Error("没有找到要移动的项目。");
+  const validation = canMoveProject(id, targetParentId, data.projects);
+  if (!validation.ok) throw new Error(validation.reason || "不能移动到当前目标。");
+  const targetParent = targetParentId ? data.projects.find((item) => item.id === targetParentId) : undefined;
+  const oldParentId = project.parentId || null;
+  const newSiblings = (targetParent ? getProjectChildren(data.projects, targetParent.id) : getRootProjects(data.projects)).filter((item) => item.id !== id);
+  const orderedIds = position === "first" ? [id, ...newSiblings.map((item) => item.id)] : [...newSiblings.map((item) => item.id), id];
+  const root = targetParent ? getRootProject(targetParent, data.projects) : project;
+  const now = new Date().toISOString();
+  const movedIds = new Set([id, ...getProjectDescendantIds(id, data.projects)]);
+  const nextParentId = targetParent?.id || null;
+  data.projects = data.projects.map((item) => {
+    if (item.id === id) {
+      return { ...item, parentId: nextParentId, rootProjectId: root.id, depth: targetParent ? getProjectDepth(targetParent, data.projects) + 1 : 1, updatedAt: now };
+    }
+    if (!movedIds.has(item.id)) return item;
+    const movedRootDepth = targetParent ? getProjectDepth(targetParent, data.projects) + 1 : 1;
+    return { ...item, rootProjectId: root.id, depth: getDepthFromAncestor(item.id, id, movedRootDepth, data.projects), updatedAt: now };
+  });
+  const orderMap = new Map(orderedIds.map((itemId, index) => [itemId, (index + 1) * 10]));
+  data.projects = data.projects.map((item) => {
+    if (orderMap.has(item.id)) return { ...item, sortOrder: orderMap.get(item.id) };
+    if (oldParentId !== nextParentId && item.parentId === oldParentId && !movedIds.has(item.id)) return item;
+    return item;
+  });
+  if (oldParentId !== nextParentId) data.projects = normalizeSiblingSortOrders(data.projects, oldParentId);
+  save(data);
+  return data.projects;
+}
+
+export function moveProjectToQuadrant(id: string, quadrant: ProjectQuadrant): Project {
+  const data = readDashboard();
+  const project = data.projects.find((item) => item.id === id);
+  if (!project) throw new Error("没有找到要移动的项目。");
+  if (project.parentId) throw new Error("子项目不能单独调整四象限。");
+  const updated = { ...project, quadrant, updatedAt: new Date().toISOString() };
+  data.projects = data.projects.map((item) => (item.id === id ? updated : item));
+  save(data);
+  return updated;
+}
+
+export function createProjectAction(projectId: string, input: Omit<ProjectStep, "id">): ProjectStep {
+  const data = readDashboard();
+  const now = new Date().toISOString();
+  const action: ProjectStep = {
+    ...input,
+    id: createId("action"),
+    name: input.name.trim(),
+    description: input.description.trim(),
+    completedAt: input.status === "done" ? input.completedAt || todayInputValue() : "",
+  };
+  let found = false;
+  data.projects = data.projects.map((project) => {
+    if (project.id !== projectId) return project;
+    found = true;
+    return { ...project, executionSteps: [...(project.executionSteps || []), action], updatedAt: now };
+  });
+  if (!found) throw new Error("没有找到所属项目。");
+  save(data);
+  return action;
+}
+
+export function updateProjectAction(projectId: string, actionId: string, input: Omit<ProjectStep, "id">): ProjectStep {
+  const data = readDashboard();
+  const now = new Date().toISOString();
+  let updated: ProjectStep | undefined;
+  data.projects = data.projects.map((project) => {
+    if (project.id !== projectId) return project;
+    const steps = (project.executionSteps || []).map((step) => {
+      if (step.id !== actionId) return step;
+      updated = {
+        ...step,
+        ...input,
+        name: input.name.trim(),
+        description: input.description.trim(),
+        completedAt: input.status === "done" ? input.completedAt || step.completedAt || todayInputValue() : "",
+      };
+      return updated;
+    });
+    return { ...project, executionSteps: steps, updatedAt: now };
+  });
+  if (!updated) throw new Error("没有找到要编辑的推进事项。");
+  save(data);
+  return updated;
+}
+
+export function deleteProjectAction(projectId: string, actionId: string): void {
+  const data = readDashboard();
+  let found = false;
+  data.projects = data.projects.map((project) => {
+    if (project.id !== projectId) return project;
+    found = (project.executionSteps || []).some((step) => step.id === actionId);
+    return { ...project, executionSteps: (project.executionSteps || []).filter((step) => step.id !== actionId), updatedAt: found ? new Date().toISOString() : project.updatedAt };
+  });
+  if (!found) throw new Error("没有找到要删除的推进事项。");
+  save(data);
+}
+
+export function moveProjectAction(sourceProjectId: string, actionId: string, targetProjectId: string): ProjectStep {
+  const data = readDashboard();
+  const source = data.projects.find((project) => project.id === sourceProjectId);
+  const target = data.projects.find((project) => project.id === targetProjectId);
+  if (!source || !target) throw new Error("没有找到推进事项或目标项目。");
+  if (getRootProject(source, data.projects).id !== getRootProject(target, data.projects).id) throw new Error("推进事项不能跨主项目移动。");
+  const action = (source.executionSteps || []).find((step) => step.id === actionId);
+  if (!action) throw new Error("没有找到要移动的推进事项。");
+  if (sourceProjectId === targetProjectId) return action;
+  const now = new Date().toISOString();
+  data.projects = data.projects.map((project) => {
+    if (project.id === sourceProjectId) return { ...project, executionSteps: (project.executionSteps || []).filter((step) => step.id !== actionId), updatedAt: now };
+    if (project.id === targetProjectId) return { ...project, executionSteps: [...(project.executionSteps || []), action], updatedAt: now };
+    return project;
+  });
+  save(data);
+  return action;
 }
 
 export function createCategory(input: CategoryInput): Category {
@@ -611,6 +783,28 @@ export function clearData(): DashboardData {
 function save(data: DashboardData): DashboardData {
   data.updatedAt = new Date().toISOString();
   return writeDashboard(data);
+}
+
+function getNextProjectSortOrder(projects: Project[]): number {
+  return projects.reduce((max, project) => Math.max(max, project.sortOrder || 0), 0) + 10;
+}
+
+function getDepthFromAncestor(itemId: string, ancestorId: string, ancestorDepth: number, projects: Project[]): number {
+  let current = projects.find((project) => project.id === itemId);
+  let distance = 1;
+  const seen = new Set<string>();
+  while (current?.parentId && current.parentId !== ancestorId && !seen.has(current.id)) {
+    seen.add(current.id);
+    current = projects.find((project) => project.id === current?.parentId);
+    distance += 1;
+  }
+  return Math.min(MAX_PROJECT_DEPTH, ancestorDepth + distance);
+}
+
+function normalizeSiblingSortOrders(projects: Project[], parentId: string | null): Project[] {
+  const siblings = parentId ? getProjectChildren(projects, parentId) : getRootProjects(projects);
+  const orderMap = new Map(siblings.map((project, index) => [project.id, (index + 1) * 10]));
+  return projects.map((project) => (orderMap.has(project.id) ? { ...project, sortOrder: orderMap.get(project.id) } : project));
 }
 
 function getNextCompletedAt(previous: WorkItem, input: WorkItemInput, now: string): string {

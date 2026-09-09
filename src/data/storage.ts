@@ -19,10 +19,12 @@ import type {
 } from "../types/dashboard";
 import { APP_VERSION, SCHEMA_VERSION } from "./appVersion";
 import { applyWorkResponsibilitiesV1Migration } from "./workResponsibilitiesMigration";
+import { migrateProjectTree, PROJECT_TREE_MIGRATION } from "./projectTreeMigration";
 
 export const STORAGE_KEY = "personal-dashboard-template:v1";
 const V120_BACKUP_KEY = `${STORAGE_KEY}:backup-before-v1.2.0`;
 const V130_BACKUP_KEY = `${STORAGE_KEY}:backup-before-v1.3.0`;
+const V160_BACKUP_KEY = `${STORAGE_KEY}:backup-before-v1.6.0`;
 
 export function createEmptyDashboardData(): DashboardData {
   return {
@@ -102,11 +104,14 @@ function normalizeDashboardData(value: Partial<DashboardData>): DashboardData {
 
 function migrateDashboardData(data: DashboardData): DashboardData {
   const migrated = applyWorkResponsibilitiesV1Migration(data).data;
+  const projectTree = migrateProjectTree(migrated.projects);
+  migrated.projects = projectTree.projects;
   ["v1.1.0-workbench-planned-date-templates", "v1.2.0-routine-rules", "v1.3.0-project-progress-items"].forEach((migrationName) => {
     if (!migrated.migrations.includes(migrationName)) {
       migrated.migrations = [...migrated.migrations, migrationName];
     }
   });
+  if (!migrated.migrations.includes(PROJECT_TREE_MIGRATION)) migrated.migrations = [...migrated.migrations, PROJECT_TREE_MIGRATION];
   migrated.version = APP_VERSION;
   migrated.appVersion = APP_VERSION;
   migrated.schemaVersion = SCHEMA_VERSION;
@@ -258,6 +263,11 @@ function normalizeProject(project: Partial<Project>): Project {
     riskNotes: project.riskNotes || "",
     completionResult: project.completionResult || "",
     retrospective: project.retrospective || "",
+    parentId: typeof project.parentId === "string" ? project.parentId : project.parentId === null ? null : undefined,
+    rootProjectId: typeof project.rootProjectId === "string" ? project.rootProjectId : undefined,
+    depth: Number.isFinite(Number(project.depth)) ? Number(project.depth) : undefined,
+    isDelayed: project.isDelayed === true,
+    note: project.note || "",
     sortOrder: Number.isFinite(Number(project.sortOrder)) ? Number(project.sortOrder) : undefined,
     createdAt: project.createdAt || new Date().toISOString(),
     updatedAt: project.updatedAt || project.createdAt || new Date().toISOString(),
@@ -356,10 +366,12 @@ function backupBeforeVersionMigration(raw: string, parsed: Partial<DashboardData
   const rank = getVersionRank(parsed?.schemaVersion || parsed?.appVersion || parsed?.version);
   if (rank < 2 && !localStorage.getItem(V120_BACKUP_KEY)) localStorage.setItem(V120_BACKUP_KEY, raw);
   if (rank < 3 && !localStorage.getItem(V130_BACKUP_KEY)) localStorage.setItem(V130_BACKUP_KEY, raw);
+  if (rank < 4 && !localStorage.getItem(V160_BACKUP_KEY)) localStorage.setItem(V160_BACKUP_KEY, raw);
 }
 
 function getVersionRank(version: unknown): number {
   if (version === "1.3.0") return 3;
+  if (version === "1.4.0") return 4;
   if (version === "1.2.0") return 2;
   if (version === "1.1.0") return 1;
   return 0;

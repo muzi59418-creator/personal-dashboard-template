@@ -166,6 +166,12 @@ export interface Project {
   riskNotes?: string;
   completionResult?: string;
   retrospective?: string;
+  /** v1.6 project tree fields. Kept optional so old backups remain readable. */
+  parentId?: string | null;
+  rootProjectId?: string;
+  depth?: number;
+  isDelayed?: boolean;
+  note?: string;
   sortOrder?: number;
   createdAt: string;
   updatedAt: string;

@@ -7,16 +7,16 @@ import type {
   Project,
   ProjectInput,
   ProjectQuadrant,
-  ProjectStatus,
   ProjectStep,
   ProjectStepStatus,
   WorkItem,
   WorkItemInput,
 } from "../../types/dashboard";
-import { PROJECT_QUADRANTS, PROJECT_STATUSES, PROJECT_STEP_STATUSES } from "../../types/dashboard";
+import { PROJECT_QUADRANTS, PROJECT_STEP_STATUSES } from "../../types/dashboard";
 import { formatDateTime, todayInputValue } from "../../utils/date";
 import { createId } from "../../utils/id";
 import { getProjectProgressSummary } from "../../utils/projectProgress";
+import { getProjectComputedStatus } from "../../utils/projectProgress";
 import { DateInput } from "../Common/DateInput";
 import { ImageGallery } from "../Common/ImageGallery";
 import { Modal } from "../Common/Modal";
@@ -33,6 +33,7 @@ interface ProjectDetailModalProps {
   diaryEntries: DiaryEntry[];
   ideas: Idea[];
   categories: Category[];
+  projects?: Project[];
   editing: boolean;
   onEdit: () => void;
   onCancelEdit: () => void;
@@ -49,6 +50,7 @@ export function ProjectDetailModal({
   diaryEntries,
   ideas,
   categories,
+  projects = [],
   editing,
   onEdit,
   onCancelEdit,
@@ -64,7 +66,8 @@ export function ProjectDetailModal({
   const [textDraft, setTextDraft] = useState("");
   const [editingStepId, setEditingStepId] = useState<string | null>(null);
   const [stepDraft, setStepDraft] = useState<ProjectStep | null>(null);
-  const progressSummary = getProjectProgressSummary(project);
+  const progressSummary = getProjectProgressSummary(project, projects);
+  const computedStatus = getProjectComputedStatus(project, projects);
   const progressLabel = progressSummary.hasProgressItems ? `${progressSummary.percent}%（${progressSummary.detail}）` : progressSummary.label;
   const relatedWork = dedupeWorkItems(workItems.filter((item) => item.projectId === project.id || item.linkedProjectIds?.includes(project.id)));
   const relatedDiaries = diaryEntries.filter((entry) => entry.linkedProjectIds.includes(project.id));
@@ -112,11 +115,6 @@ export function ProjectDetailModal({
       ...toProjectInput(project),
       ...patch,
     });
-  }
-
-  function updateProjectStatus(status: ProjectStatus) {
-    if (status === project.status) return;
-    updateProjectPatch({ status });
   }
 
   function updateProjectQuadrant(quadrant: ProjectQuadrant) {
@@ -226,7 +224,7 @@ export function ProjectDetailModal({
               <div className="project-drawer-title">
                 <h2>{project.name}</h2>
                 <div className="project-drawer-summary">
-                  <span className="chip status">{project.status}</span>
+                  <span className="chip status">{computedStatus}{project.isDelayed ? " · 延期" : ""}</span>
                   <span>{progressLabel}</span>
                   <span>{getProjectQuadrantLabel(project.quadrant)}</span>
                 </div>
@@ -257,6 +255,7 @@ export function ProjectDetailModal({
             {editing ? (
               <ProjectForm
                 project={project}
+                projects={projects}
                 initialBlankStep={startWithNewProgressItem}
                 onCancel={() => {
                   setStartWithNewProgressItem(false);
@@ -272,13 +271,7 @@ export function ProjectDetailModal({
                 <ProjectDetailSection title="项目概览">
                   <div className="detail-meta-grid project-overview-meta-grid">
                     <DetailMeta label="项目类型" value={project.type === "work" ? "工作项目" : "个人项目"} />
-                    <DetailSelect
-                      label="项目状态"
-                      value={project.status}
-                      options={PROJECT_STATUSES}
-                      getOptionLabel={(status) => status}
-                      onChange={updateProjectStatus}
-                    />
+                    <DetailMeta label="项目状态" value={`${computedStatus}${project.isDelayed ? " · 延期" : ""}`} />
                     <DetailSelect
                       label="四象限归属"
                       value={project.quadrant || "important_not_urgent"}

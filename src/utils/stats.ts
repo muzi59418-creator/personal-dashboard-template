@@ -1,6 +1,8 @@
 import type { DashboardData, DiaryEntry, Idea, Project, WorkItem } from "../types/dashboard";
-import { PROJECT_STATUSES, WORK_STATUSES } from "../types/dashboard";
+import { WORK_STATUSES } from "../types/dashboard";
 import { isIsoDateInCurrentWeek, isSameDate, todayInputValue } from "./date";
+import { getProjectComputedStatus } from "./projectProgress";
+import { getRootProjects } from "./projectTree";
 
 export type StatCardKey =
   | "todayRecords"
@@ -37,8 +39,6 @@ export interface DashboardStats {
 const pendingWorkStatus = WORK_STATUSES[0];
 const activeWorkStatus = WORK_STATUSES[1];
 const completedWorkStatus = WORK_STATUSES[2];
-const activeProjectStatus = PROJECT_STATUSES[1];
-
 export function calculateStats(data: DashboardData): DashboardStats {
   const today = todayInputValue();
   const todayDiary = data.diaryEntries.filter((entry) => isTodayCreated(entry, today));
@@ -47,7 +47,8 @@ export function calculateStats(data: DashboardData): DashboardStats {
   const weeklyWork = data.workItems.filter((item) => isThisWeek(item.createdAt) || isThisWeek(item.updatedAt));
   const weeklyCompleted = data.workItems.filter((item) => isCompletedThisWeek(item));
   const pendingWork = data.workItems.filter((item) => item.status === pendingWorkStatus || item.status === activeWorkStatus);
-  const activeProjects = data.projects.filter((project) => project.status === activeProjectStatus);
+  const rootProjects = getRootProjects(data.projects);
+  const activeProjects = rootProjects.filter((project) => getProjectComputedStatus(project, data.projects) === "进行中");
   const unorganizedIdeas = data.ideas.filter((idea) => idea.status === "unorganized");
 
   return {
@@ -66,7 +67,7 @@ export function calculateStats(data: DashboardData): DashboardStats {
       weeklyWork: [{ title: "本周新增或更新的工作内容", records: weeklyWork.map(toWorkRecord) }],
       weeklyCompleted: [{ title: "本周完成的工作内容", records: weeklyCompleted.map(toWorkRecord) }],
       pendingWork: [{ title: "待处理 / 进行中的工作内容", records: pendingWork.map(toWorkRecord) }],
-      activeProjects: [{ title: "进行中的项目", records: activeProjects.map(toProjectRecord) }],
+      activeProjects: [{ title: "进行中的项目", records: activeProjects.map((project) => toProjectRecord(project, data.projects)) }],
       unorganizedIdeas: [{ title: "待整理内容", records: unorganizedIdeas.map(toIdeaRecord) }],
     },
   };
@@ -117,11 +118,11 @@ function toIdeaRecord(idea: Idea): StatRecord {
   };
 }
 
-function toProjectRecord(project: Project): StatRecord {
+function toProjectRecord(project: Project, projects: Project[]): StatRecord {
   return {
     id: project.id,
     kind: "project",
     title: project.name || "未命名项目",
-    status: project.status,
+    status: getProjectComputedStatus(project, projects),
   };
 }

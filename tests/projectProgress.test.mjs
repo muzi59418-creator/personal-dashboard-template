@@ -141,7 +141,7 @@ assert.equal(related.length, 2);
 const oldBackup = { diaryEntries: [], workItems: [], ideas: [], categories: [], projects: [{ ...emptyProject, progress: 80 }] };
 assert.equal(validateBackup(oldBackup), true);
 const newBackup = {
-  version: "1.3.0",
+  version: "1.5.0",
   appVersion: "1.5.0",
   schemaVersion: "1.3.0",
   diaryEntries: [],
@@ -164,14 +164,21 @@ assert.doesNotMatch(projectOverviewSource, /project\.progress/);
 const projectCardSource = readFileSync("src/components/Projects/ProjectCard.tsx", "utf8");
 assert.match(projectCardSource, /getProjectProgressSummary/);
 assert.doesNotMatch(projectCardSource, /project\.progress/);
+assert.doesNotMatch(projectCardSource, /project-status-select/);
 
 const workPreviewSource = readFileSync("src/components/Dashboard/WorkPreview.tsx", "utf8");
-assert.match(workPreviewSource, /\.filter\(isProjectActionable\)/);
+assert.match(workPreviewSource, /getProjectComputedStatus/);
 assert.match(workPreviewSource, /step\.status !== "done"/);
 assert.doesNotMatch(workPreviewSource, /getProjectStepPlanDate\(step\) === today/);
-assert.match(workPreviewSource, /project\.status === "未开始" \|\| project\.status === "进行中" \|\| project\.status === "长期维护"/);
+assert.doesNotMatch(workPreviewSource, /project\.status === "未开始" \|\| project\.status === "进行中" \|\| project\.status === "长期维护"/);
 assert.match(workPreviewSource, /暂无待处理推进事项/);
 assert.match(workPreviewSource, /className="project-action-project"/);
 assert.match(workPreviewSource, /action\.project\.name/);
+
+const projectTreeSource = readFileSync("src/components/Projects/ProjectList.tsx", "utf8");
+assert.match(projectTreeSource, /新增子项目/);
+assert.match(projectTreeSource, /depth < 5/);
+assert.match(projectTreeSource, /不能移动到当前目标/);
+assert.match(readFileSync("src/data/projectTreeMigration.ts", "utf8"), /v1\.6\.0-project-tree/);
 
 console.log("projectProgress tests passed");

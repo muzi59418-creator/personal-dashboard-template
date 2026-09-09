@@ -11,6 +11,15 @@ export interface ChangelogEntry {
 
 export const changelogEntries: ChangelogEntry[] = [
   {
+    date: "2026-09-09",
+    title: "v1.6.0 项目管理页重构",
+    type: "功能优化",
+    modules: ["项目管理", "项目树", "推进事项", "数据迁移"],
+    summary:
+      "项目管理改为四象限折叠分组和最多 5 级的树形项目列表，任意节点支持推进事项；父级进度递归自动计算，状态按进度推导，延期保留为独立人工标记。新增路径导航、下一步、备注、移动、拖拽和级联删除确认，并为旧项目提供无损迁移。",
+    status: "待提交",
+  },
+  {
     date: "2026-08-20",
     title: "v1.5.0 首页信息密度与账号状态优化",
     type: "功能优化",

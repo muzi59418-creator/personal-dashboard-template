@@ -1,9 +1,9 @@
 import { ArrowDown, ArrowUp } from "lucide-react";
-import type { KeyboardEvent, MouseEvent, PointerEvent, SyntheticEvent } from "react";
-import type { Project, ProjectStatus } from "../../types/dashboard";
-import { PROJECT_STATUSES } from "../../types/dashboard";
+import type { KeyboardEvent, MouseEvent, PointerEvent } from "react";
+import type { Project } from "../../types/dashboard";
 import { formatDateTime } from "../../utils/date";
 import { getProjectProgressSummary } from "../../utils/projectProgress";
+import { getProjectComputedStatus } from "../../utils/projectProgress";
 
 interface ProjectCardProps {
   project: Project;
@@ -12,14 +12,15 @@ interface ProjectCardProps {
   totalCount?: number;
   onMoveUp?: () => void;
   onMoveDown?: () => void;
-  onStatusChange?: (status: ProjectStatus) => void;
+  projects?: Project[];
 }
 
-export function ProjectCard({ project, onOpen, sortIndex, totalCount, onMoveUp, onMoveDown, onStatusChange }: ProjectCardProps) {
+export function ProjectCard({ project, onOpen, sortIndex, totalCount, onMoveUp, onMoveDown, projects = [] }: ProjectCardProps) {
   const canMoveUp = typeof sortIndex === "number" && sortIndex > 0 && Boolean(onMoveUp);
   const canMoveDown = typeof sortIndex === "number" && typeof totalCount === "number" && sortIndex < totalCount - 1 && Boolean(onMoveDown);
   const showSortActions = Boolean(onMoveUp || onMoveDown);
-  const progressSummary = getProjectProgressSummary(project);
+  const progressSummary = getProjectProgressSummary(project, projects);
+  const computedStatus = getProjectComputedStatus(project, projects);
 
   function handleKeyDown(event: KeyboardEvent<HTMLElement>) {
     if (!onOpen) return;
@@ -30,10 +31,6 @@ export function ProjectCard({ project, onOpen, sortIndex, totalCount, onMoveUp, 
   }
 
   function stopCardOpen(event: MouseEvent<HTMLButtonElement>) {
-    event.stopPropagation();
-  }
-
-  function stopStatusOpen(event: SyntheticEvent<HTMLSpanElement | HTMLSelectElement>) {
     event.stopPropagation();
   }
 
@@ -76,32 +73,7 @@ export function ProjectCard({ project, onOpen, sortIndex, totalCount, onMoveUp, 
           <p className="project-next-action-preview">下一步：{project.nextAction || "暂未设置"}</p>
         </div>
         <div className="project-compact-side">
-          <span
-            className="chip status project-status-select-shell"
-            onClick={stopStatusOpen}
-            onKeyDown={stopStatusOpen}
-            onMouseDown={stopStatusOpen}
-            onPointerDown={stopStatusOpen}
-            onTouchStart={stopStatusOpen}
-          >
-            <select
-              className="status-select-control project-status-select"
-              value={project.status}
-              aria-label={`修改 ${project.name} 的状态`}
-              onClick={stopStatusOpen}
-              onKeyDown={stopStatusOpen}
-              onChange={(event) => {
-                event.stopPropagation();
-                onStatusChange?.(event.target.value as ProjectStatus);
-              }}
-            >
-              {PROJECT_STATUSES.map((status) => (
-                <option key={status} value={status}>
-                  {status}
-                </option>
-              ))}
-            </select>
-          </span>
+          <span className="chip status">{computedStatus}{project.isDelayed ? " · 延期" : ""}</span>
           {showSortActions && (
             <div className="project-sort-actions" aria-label="调整项目顺序">
               <button

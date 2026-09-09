@@ -6,6 +6,7 @@ import { EmptyState } from "../Common/EmptyState";
 import { Modal } from "../Common/Modal";
 import { WorkStatusSelect } from "../WorkItems/WorkStatusSelect";
 import { getProjectStepStatusLabel } from "../Projects/ProjectForm";
+import { getProjectComputedStatus } from "../../utils/projectProgress";
 
 interface WorkPreviewProps {
   categories: Category[];
@@ -371,7 +372,7 @@ function getLocalDatePart(value: string | undefined): string {
 
 function getProjectActions(projects: Project[]): ProjectAction[] {
   return projects
-    .filter(isProjectActionable)
+    .filter((project) => isProjectActionable(project, projects))
     .flatMap((project) =>
       (project.executionSteps || [])
         .filter((step) => step.status !== "done")
@@ -387,8 +388,8 @@ function getProjectActions(projects: Project[]): ProjectAction[] {
     .sort((a, b) => a.name.localeCompare(b.name, "zh-CN"));
 }
 
-function isProjectActionable(project: Project): boolean {
-  return project.status === "未开始" || project.status === "进行中" || project.status === "长期维护";
+function isProjectActionable(project: Project, projects: Project[]): boolean {
+  return getProjectComputedStatus(project, projects) === "未开始" || getProjectComputedStatus(project, projects) === "进行中";
 }
 
 function getProjectStepPlanDate(step: ProjectStep): string {

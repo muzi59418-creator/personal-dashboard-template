@@ -20,6 +20,7 @@ import {
   createDiaryEntry,
   createIdea,
   createProject,
+  createProjectAction,
   createRoutineWorkTemplate,
   createWorkTemplate,
   createWorkItem,
@@ -27,6 +28,7 @@ import {
   deleteDiaryEntry,
   deleteIdea,
   deleteProject,
+  deleteProjectAction,
   deleteRoutineWorkTemplate,
   deleteWorkTemplate,
   deleteWorkItem,
@@ -36,6 +38,9 @@ import {
   pauseRoutineWorkTemplate,
   postponeRoutineWorkItem,
   reorderProjects,
+  moveProjectAction,
+  moveProjectNode,
+  moveProjectToQuadrant,
   reorderWorkTemplates,
   resumeRoutineWorkTemplate,
   skipRoutineWorkItem,
@@ -44,6 +49,7 @@ import {
   updateDiaryEntry,
   updateIdea,
   updateProject,
+  updateProjectAction,
   updateRoutineWorkTemplate,
   updateRoutineWorkTemplateWithMode,
   updateWorkTemplate,
@@ -173,6 +179,12 @@ function DashboardApp({ accountName, onSignOut, cloudProbe, onCloudInitialized }
       updateProjectAction: (id: string, input: ProjectInput) => runAction(() => updateProject(id, input), "项目已更新"),
       deleteProjectAction: (id: string) => runAction(() => deleteProject(id), "项目已删除"),
       reorderProjectAction: (projectIds: string[]) => runAction(() => reorderProjects(projectIds), "项目顺序已保存"),
+      createProjectProgressAction: (projectId: string, input: Parameters<typeof createProjectAction>[1]) => runAction(() => createProjectAction(projectId, input), "推进事项已保存"),
+      updateProjectProgressAction: (projectId: string, actionId: string, input: Parameters<typeof updateProjectAction>[2]) => runAction(() => updateProjectAction(projectId, actionId, input), "推进事项已更新"),
+      deleteProjectProgressAction: (projectId: string, actionId: string) => runAction(() => deleteProjectAction(projectId, actionId), "推进事项已删除"),
+      moveProjectProgressAction: (sourceProjectId: string, actionId: string, targetProjectId: string) => runAction(() => moveProjectAction(sourceProjectId, actionId, targetProjectId), "推进事项已移动"),
+      moveProjectNodeAction: (projectId: string, targetParentId: string | null, position: "first" | "last") => runAction(() => moveProjectNode(projectId, targetParentId, position), "项目已移动"),
+      moveProjectToQuadrantAction: (projectId: string, quadrant: import("./types/dashboard").ProjectQuadrant) => runAction(() => moveProjectToQuadrant(projectId, quadrant), "项目象限已更新"),
       createCategoryAction: (input: CategoryInput) => runAction(() => createCategory(input), "分类已保存"),
       updateCategoryAction: (id: string, input: CategoryInput) => runAction(() => updateCategory(id, input), "分类已更新"),
       deleteCategoryAction: (id: string) => runAction(() => deleteCategory(id), "分类已删除"),
@@ -330,6 +342,12 @@ function DashboardApp({ accountName, onSignOut, cloudProbe, onCloudInitialized }
               onDeleteIdea={actions.deleteIdeaAction}
               onConvertIdeaToWork={actions.convertIdeaToWorkAction}
               onConvertIdeaToDiary={actions.convertIdeaToDiaryAction}
+              onCreateAction={actions.createProjectProgressAction}
+              onUpdateAction={actions.updateProjectProgressAction}
+              onDeleteAction={actions.deleteProjectProgressAction}
+              onMoveAction={actions.moveProjectProgressAction}
+              onMoveProject={actions.moveProjectNodeAction}
+              onMoveToQuadrant={actions.moveProjectToQuadrantAction}
             />
           )}
           {activeView === "categories" && (
@@ -402,9 +420,16 @@ function useDashboardActionsShape() {
     deleteIdeaAction: (_id: string) => undefined as unknown,
     convertIdeaToWorkAction: (_id: string, _input: WorkItemInput) => undefined as unknown,
     convertIdeaToDiaryAction: (_id: string, _input: DiaryEntryInput) => undefined as unknown,
+    createProjectAction: (_input: ProjectInput) => undefined as unknown,
     updateProjectAction: (_id: string, _input: ProjectInput) => undefined as unknown,
     deleteProjectAction: (_id: string) => undefined as unknown,
     reorderProjectAction: (_projectIds: string[]) => undefined as unknown,
+    createProjectProgressAction: (_projectId: string, _input: Parameters<typeof createProjectAction>[1]) => undefined as unknown,
+    updateProjectProgressAction: (_projectId: string, _actionId: string, _input: Parameters<typeof updateProjectAction>[2]) => undefined as unknown,
+    deleteProjectProgressAction: (_projectId: string, _actionId: string) => undefined as unknown,
+    moveProjectProgressAction: (_sourceProjectId: string, _actionId: string, _targetProjectId: string) => undefined as unknown,
+    moveProjectNodeAction: (_projectId: string, _targetParentId: string | null, _position: "first" | "last") => undefined as unknown,
+    moveProjectToQuadrantAction: (_projectId: string, _quadrant: import("./types/dashboard").ProjectQuadrant) => undefined as unknown,
     updateWorkResponsibilitiesAction: (_groups: WorkResponsibilityGroupInput[]) => undefined as unknown,
   };
 }
@@ -544,6 +569,7 @@ function DashboardHome({ data, actions, onNavigate }: DashboardHomeProps) {
           diaryEntries={data.diaryEntries}
           ideas={data.ideas}
           categories={data.categories}
+          projects={data.projects}
           editing={editingDetail}
           onEdit={() => setEditingDetail(true)}
           onCancelEdit={() => setEditingDetail(false)}

@@ -1,10 +1,11 @@
 import { Plus, Trash2 } from "lucide-react";
 import { useState } from "react";
-import type { Project, ProjectInput, ProjectQuadrant, ProjectStatus, ProjectStep, ProjectStepStatus, ProjectType } from "../../types/dashboard";
-import { PROJECT_QUADRANTS, PROJECT_STATUSES, PROJECT_STEP_STATUSES } from "../../types/dashboard";
+import type { Project, ProjectInput, ProjectQuadrant, ProjectStep, ProjectStepStatus, ProjectType } from "../../types/dashboard";
+import { PROJECT_QUADRANTS, PROJECT_STEP_STATUSES } from "../../types/dashboard";
 import { todayInputValue } from "../../utils/date";
 import { createId } from "../../utils/id";
 import { getProjectProgressSummary } from "../../utils/projectProgress";
+import { getProjectComputedStatus } from "../../utils/projectProgress";
 import { DateInput } from "../Common/DateInput";
 
 interface ProjectFormProps {
@@ -12,6 +13,7 @@ interface ProjectFormProps {
   onCancel: () => void;
   onSubmit: (input: ProjectInput) => void;
   initialBlankStep?: boolean;
+  projects?: Project[];
 }
 
 const quadrantLabels: Record<ProjectQuadrant, string> = {
@@ -27,10 +29,9 @@ const stepStatusLabels: Record<ProjectStepStatus, string> = {
   done: "已完成",
 };
 
-export function ProjectForm({ project, onCancel, onSubmit, initialBlankStep = false }: ProjectFormProps) {
+export function ProjectForm({ project, onCancel, onSubmit, initialBlankStep = false, projects = [] }: ProjectFormProps) {
   const [name, setName] = useState(project?.name || "");
   const [type, setType] = useState<ProjectType>(project?.type || "work");
-  const [status, setStatus] = useState<ProjectStatus>(project?.status || "未开始");
   const [quadrant, setQuadrant] = useState<ProjectQuadrant>(project?.quadrant || "important_not_urgent");
   const [startDate, setStartDate] = useState(project?.startDate || "");
   const [dueDate, setDueDate] = useState(project?.dueDate || "");
@@ -49,7 +50,7 @@ export function ProjectForm({ project, onCancel, onSubmit, initialBlankStep = fa
   const [completionResult, setCompletionResult] = useState(project?.completionResult || "");
   const [retrospective, setRetrospective] = useState(project?.retrospective || "");
   const [error, setError] = useState("");
-  const progressSummary = getProjectProgressSummary({ executionSteps });
+  const progressSummary = getProjectProgressSummary(project ? { ...project, executionSteps } : { executionSteps }, projects);
 
   function submit(event: React.FormEvent) {
     event.preventDefault();
@@ -62,7 +63,7 @@ export function ProjectForm({ project, onCancel, onSubmit, initialBlankStep = fa
     onSubmit({
       name: name.trim(),
       type,
-      status,
+      status: project?.status || "未开始",
       quadrant,
       progress: project?.progress || 0,
       startDate,
@@ -123,16 +124,11 @@ export function ProjectForm({ project, onCancel, onSubmit, initialBlankStep = fa
               <option value="personal">个人项目</option>
             </select>
           </label>
-          <label>
-            项目状态
-            <select value={status} onChange={(event) => setStatus(event.target.value as ProjectStatus)}>
-              {PROJECT_STATUSES.map((projectStatus) => (
-                <option key={projectStatus} value={projectStatus}>
-                  {projectStatus}
-                </option>
-              ))}
-            </select>
-          </label>
+          <div className="readonly-field">
+            <span>项目状态</span>
+            <strong>{project ? getProjectComputedStatus(project, projects) : "未开始"}</strong>
+            <small>根据进度自动计算</small>
+          </div>
         </div>
         <div className="form-grid">
           <label>

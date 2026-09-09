@@ -65,7 +65,7 @@ function rule(input: Partial<RoutineWorkTemplate>): RoutineWorkTemplate {
 
 function seedData(rules: RoutineWorkTemplate[], workItems: WorkItem[] = []): DashboardData {
   return {
-    version: "1.3.0",
+    version: "1.5.0",
     appVersion: "1.5.0",
     schemaVersion: "1.3.0",
     updatedAt: "2026-01-01T00:00:00.000Z",
@@ -74,7 +74,7 @@ function seedData(rules: RoutineWorkTemplate[], workItems: WorkItem[] = []): Das
     workItems,
     ideas: [],
     categories: [{ id: "cat", name: "分类", color: "#2563eb", sortOrder: 10, createdAt: "2026-01-01T00:00:00.000Z", updatedAt: "2026-01-01T00:00:00.000Z" }],
-    projects: [],
+    projects: [{ id: "old_project", name: "旧项目", type: "work", description: "旧描述", content: "旧内容", progress: 80, status: "进行中", executionSteps: [] }],
     workResponsibilities: [],
     routineWorkTemplates: rules,
     workTemplates: [],
@@ -173,19 +173,23 @@ localStorage.setItem(
     workItems: [{ id: "old_work", title: "旧任务", categoryId: "cat", status: "待处理", content: "保留", date: "2026-01-05", projectId: "", createdAt: "2026-01-01T00:00:00.000Z", updatedAt: "2026-01-01T00:00:00.000Z" }],
     ideas: [],
     categories: [],
-    projects: [],
+    projects: [{ id: "old_project", name: "旧项目", type: "work", description: "旧描述", content: "旧内容", progress: 80, status: "进行中", executionSteps: [] }],
     routineWorkTemplates: [{ id: "old_rule", name: "旧规则", frequency: "manual", defaultStatus: "待处理", enabled: true }],
   }),
 );
 const migrated = readDashboard();
-assert.equal(migrated.appVersion, "1.5.0", "旧数据迁移补 appVersion");
-assert.equal(migrated.schemaVersion, "1.3.0", "旧数据迁移补 schemaVersion");
+assert.equal(migrated.appVersion, "1.6.0", "旧数据迁移补 appVersion");
+assert.equal(migrated.schemaVersion, "1.4.0", "旧数据迁移补 schemaVersion");
 assert.equal(migrated.workItems[0].title, "旧任务", "旧数据迁移不丢失工作记录");
 assert.equal(migrated.routineWorkTemplates[0].frequency, "custom", "旧手动频率兼容为自定义");
+assert.equal(migrated.projects[0].parentId, null, "旧项目迁移为 L1 主项目");
+assert.equal(migrated.projects[0].rootProjectId, "old_project", "旧项目迁移保留主项目根 ID");
+assert.equal(migrated.projects[0].depth, 1, "旧项目迁移为第 1 层");
+assert.equal(migrated.projects[0].isDelayed, false, "旧项目迁移补齐延期字段");
 
 const exported = exportData();
-assert.equal(JSON.parse(exported).appVersion, "1.5.0", "新 JSON 导出包含 appVersion");
-assert.equal(JSON.parse(exported).schemaVersion, "1.3.0", "新 JSON 导出包含 schemaVersion");
+assert.equal(JSON.parse(exported).appVersion, "1.6.0", "新 JSON 导出包含 appVersion");
+assert.equal(JSON.parse(exported).schemaVersion, "1.4.0", "新 JSON 导出包含 schemaVersion");
 const imported = importData(exported);
 assert.equal(imported.workItems[0].title, "旧任务", "新 JSON 可再次导入");
 
