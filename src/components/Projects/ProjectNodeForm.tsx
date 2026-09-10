@@ -65,10 +65,6 @@ export function ProjectNodeForm({ project, parent, onCancel, onSubmit }: Project
 
   return (
     <form className="form-stack project-node-form" onSubmit={submit}>
-      <div className="project-form-context">
-        <span>{project ? "编辑项目" : parent ? "新增子项目" : "新增主项目"}</span>
-        {parent && <strong>{getProjectPathLabel(parent)}</strong>}
-      </div>
       <label>
         项目名称
         <input value={name} onChange={(event) => setName(event.target.value)} placeholder="例如：PC 落地页" autoFocus required />

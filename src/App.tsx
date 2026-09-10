@@ -183,7 +183,7 @@ function DashboardApp({ accountName, onSignOut, cloudProbe, onCloudInitialized }
       updateProjectProgressAction: (projectId: string, actionId: string, input: Parameters<typeof updateProjectAction>[2]) => runAction(() => updateProjectAction(projectId, actionId, input), "推进事项已更新"),
       deleteProjectProgressAction: (projectId: string, actionId: string) => runAction(() => deleteProjectAction(projectId, actionId), "推进事项已删除"),
       moveProjectProgressAction: (sourceProjectId: string, actionId: string, targetProjectId: string) => runAction(() => moveProjectAction(sourceProjectId, actionId, targetProjectId), "推进事项已移动"),
-      moveProjectNodeAction: (projectId: string, targetParentId: string | null, position: "first" | "last") => runAction(() => moveProjectNode(projectId, targetParentId, position), "项目已移动"),
+      moveProjectNodeAction: (projectId: string, targetParentId: string | null, position: "first" | "last" | "before" | "after", referenceProjectId?: string) => runAction(() => moveProjectNode(projectId, targetParentId, position, referenceProjectId), "项目已移动"),
       moveProjectToQuadrantAction: (projectId: string, quadrant: import("./types/dashboard").ProjectQuadrant) => runAction(() => moveProjectToQuadrant(projectId, quadrant), "项目象限已更新"),
       createCategoryAction: (input: CategoryInput) => runAction(() => createCategory(input), "分类已保存"),
       updateCategoryAction: (id: string, input: CategoryInput) => runAction(() => updateCategory(id, input), "分类已更新"),
@@ -428,7 +428,7 @@ function useDashboardActionsShape() {
     updateProjectProgressAction: (_projectId: string, _actionId: string, _input: Parameters<typeof updateProjectAction>[2]) => undefined as unknown,
     deleteProjectProgressAction: (_projectId: string, _actionId: string) => undefined as unknown,
     moveProjectProgressAction: (_sourceProjectId: string, _actionId: string, _targetProjectId: string) => undefined as unknown,
-    moveProjectNodeAction: (_projectId: string, _targetParentId: string | null, _position: "first" | "last") => undefined as unknown,
+    moveProjectNodeAction: (_projectId: string, _targetParentId: string | null, _position: "first" | "last" | "before" | "after", _referenceProjectId?: string) => undefined as unknown,
     moveProjectToQuadrantAction: (_projectId: string, _quadrant: import("./types/dashboard").ProjectQuadrant) => undefined as unknown,
     updateWorkResponsibilitiesAction: (_groups: WorkResponsibilityGroupInput[]) => undefined as unknown,
   };

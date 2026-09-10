@@ -2,6 +2,9 @@ import type { Project, ProjectQuadrant } from "../types/dashboard";
 
 export const MAX_PROJECT_DEPTH = 5;
 
+export type ProjectMovePosition = "first" | "last" | "before" | "after";
+export type ProjectDropPosition = "before" | "inside" | "after";
+
 export function isRootProject(project: Pick<Project, "parentId">): boolean {
   return !project.parentId;
 }
@@ -103,6 +106,73 @@ export function canMoveProject(projectId: string, targetParentId: string | null,
   return { ok: true };
 }
 
+/**
+ * Converts the pointer position within a project row into an explicit drop zone.
+ * The middle zone is intentionally narrower than the two same-level zones so
+ * an ordinary drag across a row prefers reordering over changing hierarchy.
+ */
+export function getProjectDropPosition(pointerOffsetY: number, rowHeight: number): ProjectDropPosition {
+  if (!Number.isFinite(pointerOffsetY) || !Number.isFinite(rowHeight) || rowHeight <= 0) return "inside";
+  const ratio = Math.max(0, Math.min(1, pointerOffsetY / rowHeight));
+  if (ratio < 0.3) return "before";
+  if (ratio > 0.7) return "after";
+  return "inside";
+}
+
+/**
+ * Returns a display-only project number. It is derived from the current tree
+ * and sibling order; it is never persisted in the project name or data shape.
+ */
+export function getProjectNumber(project: Project, projects: Project[]): string {
+  const depth = getProjectDepth(project, projects);
+  const siblingIndex = getProjectSiblingIndex(project, projects);
+  if (depth === 1) return `${toChineseNumber(siblingIndex)}、`;
+  if (depth === 2) return String(siblingIndex);
+  if (depth === 3) {
+    const parent = project.parentId ? projects.find((item) => item.id === project.parentId) : undefined;
+    const parentIndex = parent ? getProjectSiblingIndex(parent, projects) : 1;
+    return `${parentIndex}.${siblingIndex}`;
+  }
+  if (depth === 4) return toCircledNumber(siblingIndex);
+  return toAlphabeticNumber(siblingIndex);
+}
+
+function getProjectSiblingIndex(project: Project, projects: Project[]): number {
+  const siblings = project.parentId ? getProjectChildren(projects, project.parentId) : getRootProjects(projects);
+  const index = siblings.findIndex((item) => item.id === project.id);
+  return index >= 0 ? index + 1 : 1;
+}
+
+function toChineseNumber(value: number): string {
+  const digits = ["零", "一", "二", "三", "四", "五", "六", "七", "八", "九"];
+  if (value <= 0) return digits[0];
+  if (value < 10) return digits[value];
+  if (value === 10) return "十";
+  if (value < 20) return `十${digits[value - 10]}`;
+  if (value < 100) {
+    const tens = Math.floor(value / 10);
+    const ones = value % 10;
+    return `${digits[tens]}十${ones ? digits[ones] : ""}`;
+  }
+  return String(value);
+}
+
+function toCircledNumber(value: number): string {
+  const circled = ["", "①", "②", "③", "④", "⑤", "⑥", "⑦", "⑧", "⑨", "⑩", "⑪", "⑫", "⑬", "⑭", "⑮", "⑯", "⑰", "⑱", "⑲", "⑳"];
+  return circled[value] || `${value}⃝`;
+}
+
+function toAlphabeticNumber(value: number): string {
+  let current = Math.max(1, value);
+  let result = "";
+  while (current > 0) {
+    current -= 1;
+    result = String.fromCharCode(65 + (current % 26)) + result;
+    current = Math.floor(current / 26);
+  }
+  return result;
+}
+
 export function compareProjectOrder(a: Project, b: Project): number {
   const aHasOrder = Number.isFinite(Number(a.sortOrder));
   const bHasOrder = Number.isFinite(Number(b.sortOrder));
@@ -120,4 +190,3 @@ function getTimeValue(value: string): number {
   const time = new Date(value).getTime();
   return Number.isFinite(time) ? time : 0;
 }
-

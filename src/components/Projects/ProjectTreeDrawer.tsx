@@ -3,7 +3,7 @@ import { useEffect, useState } from "react";
 import type { Project, ProjectStep } from "../../types/dashboard";
 import { formatDateTime } from "../../utils/date";
 import { getProjectComputedStatus, getProjectProgressSummary } from "../../utils/projectProgress";
-import { getProjectChildren, getProjectDepth, getProjectPath } from "../../utils/projectTree";
+import { getProjectChildren, getProjectDepth, getProjectNumber, getProjectPath } from "../../utils/projectTree";
 
 interface ProjectTreeDrawerProps {
   project: Project;
@@ -78,7 +78,7 @@ export function ProjectTreeDrawer({
                   </span>
                 ))}
               </div>
-              <h2>{project.name}</h2>
+              <h2><span className="project-drawer-number" aria-hidden="true">{getProjectNumber(project, projects)}</span>{project.name}</h2>
               <div className="project-tree-drawer-summary">
                 <span className="project-status-text">{status}</span>
                 {project.isDelayed && <span>· 延期</span>}
@@ -130,7 +130,7 @@ export function ProjectTreeDrawer({
                   {children.map((child) => {
                     const childProgress = getProjectProgressSummary(child, projects);
                     return <button className="project-drawer-child-row" type="button" key={child.id} onClick={() => onSelectProject(child.id)}>
-                      <span className="project-drawer-child-main"><strong>{child.name}</strong><small>{getProjectComputedStatus(child, projects)}{child.isDelayed ? " · 延期" : ""}</small></span>
+                      <span className="project-drawer-child-main"><strong><span className="project-drawer-number" aria-hidden="true">{getProjectNumber(child, projects)}</span>{child.name}</strong><small>{getProjectComputedStatus(child, projects)}{child.isDelayed ? " · 延期" : ""}</small></span>
                       <span className="project-drawer-child-meta">{childProgress.percent === null ? "—" : `${childProgress.percent}%`}<ChevronRight size={15} /></span>
                     </button>;
                   })}
@@ -171,4 +171,3 @@ export function ProjectTreeDrawer({
     </div>
   );
 }
-

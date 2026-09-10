@@ -2162,9 +2162,9 @@ legend {
 }
 
 .project-stat-card {
-  display: flex;
-  align-items: baseline;
-  justify-content: space-between;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+  align-items: center;
   gap: 10px;
   min-width: 0;
   padding: 14px 16px;
@@ -2175,8 +2175,11 @@ legend {
 }
 
 .project-stat-card span {
+  grid-column: 1;
+  grid-row: 1;
+  justify-self: start;
   overflow: hidden;
-  color: var(--muted);
+  color: #475569;
   font-size: 12px;
   font-weight: 780;
   text-overflow: ellipsis;
@@ -2184,6 +2187,9 @@ legend {
 }
 
 .project-stat-card strong {
+  grid-column: 2;
+  grid-row: 1;
+  justify-self: center;
   font-size: 26px;
   line-height: 1;
 }
@@ -2196,7 +2202,7 @@ legend {
 
 .project-tree-toolbar {
   display: grid;
-  grid-template-columns: minmax(260px, 1fr) minmax(130px, 160px) minmax(130px, 160px) minmax(130px, 160px);
+  grid-template-columns: minmax(260px, 1fr);
   gap: 10px;
   margin-bottom: 14px;
 }
@@ -2313,6 +2319,7 @@ legend {
 }
 
 .project-tree-row {
+  position: relative;
   display: grid;
   grid-template-columns: 28px 18px minmax(0, 1fr) auto 62px 52px 34px;
   align-items: center;
@@ -2343,6 +2350,32 @@ legend {
   background: #eff6ff;
   box-shadow: var(--ring);
 }
+
+.project-tree-row.drop-inside {
+  border-color: #60a5fa;
+  background: #eff6ff;
+  box-shadow: var(--ring);
+}
+
+.project-tree-row.drop-before,
+.project-tree-row.drop-after {
+  background: #fbfdff;
+}
+
+.project-tree-row.drop-before::before,
+.project-tree-row.drop-after::after {
+  position: absolute;
+  right: 10px;
+  left: 10px;
+  height: 3px;
+  border-radius: 999px;
+  background: #2563eb;
+  content: "";
+  pointer-events: none;
+}
+
+.project-tree-row.drop-before::before { top: -3px; }
+.project-tree-row.drop-after::after { bottom: -3px; }
 
 .project-tree-chevron,
 .project-node-menu-button {
@@ -2390,6 +2423,16 @@ legend {
   font-size: 14px;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.project-tree-number {
+  flex: 0 0 auto;
+  min-width: 2.5em;
+  color: #1d4ed8;
+  font-size: 13px;
+  font-variant-numeric: tabular-nums;
+  font-weight: 800;
+  text-align: right;
 }
 
 .project-delayed-text,
@@ -2531,6 +2574,17 @@ legend {
   overflow-wrap: anywhere;
   font-size: 23px;
   line-height: 1.24;
+}
+
+.project-drawer-number {
+  display: inline-block;
+  min-width: 2.5em;
+  margin-right: 8px;
+  color: #1d4ed8;
+  font-size: 0.72em;
+  font-variant-numeric: tabular-nums;
+  font-weight: 800;
+  vertical-align: 0.12em;
 }
 
 .project-path {
@@ -2702,9 +2756,16 @@ legend {
 }
 
 .project-drawer-child-main strong {
+  display: block;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.project-drawer-child-main strong .project-drawer-number {
+  min-width: 2em;
+  margin-right: 6px;
+  font-size: 0.9em;
 }
 
 .project-drawer-child-main small,
@@ -2797,6 +2858,21 @@ legend {
   min-width: min(100%, 440px);
 }
 
+.checkbox-field {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  width: fit-content;
+  color: #334155;
+  line-height: 1.4;
+}
+
+.checkbox-field input {
+  width: auto;
+  min-height: 0;
+  margin: 0;
+}
+
 .project-form-context {
   display: grid;
   gap: 4px;
@@ -2818,11 +2894,11 @@ legend {
   }
 
   .project-tree-toolbar {
-    grid-template-columns: 1fr 1fr;
+    grid-template-columns: 1fr;
   }
 
   .project-search-field {
-    grid-column: 1 / -1;
+    grid-column: auto;
   }
 
   .project-tree-row {
@@ -2857,6 +2933,10 @@ legend {
   .project-tree-drawer-body {
     padding: 14px 14px 84px;
   }
+
+  .modal.project-node-modal {
+    width: min(100%, 560px);
+  }
 }
 
 @media (max-width: 520px) {
@@ -2883,7 +2963,11 @@ legend {
   }
 
   .project-tree-title-line strong {
-    max-width: 54vw;
+    max-width: calc(54vw - 28px);
+  }
+
+  .modal.project-node-modal {
+    width: min(100%, 520px);
   }
 
   .project-tree-subline > span:not(:first-child) {
@@ -3323,6 +3407,10 @@ legend {
 
 .modal {
   padding: 20px;
+}
+
+.modal.project-node-modal {
+  width: min(50vw, 720px);
 }
 
 .modal-header {
@@ -4858,6 +4946,40 @@ legend {
   gap: 12px;
   max-width: 420px;
   padding: 22px;
+}
+
+.confirm-dialog > svg {
+  color: #dc2626;
+}
+
+.confirm-dialog p {
+  margin: 0;
+  color: #475569;
+  line-height: 1.65;
+  white-space: pre-line;
+}
+
+.confirm-dialog .danger-button {
+  border-color: #dc2626;
+  background: #dc2626;
+  color: #fff;
+}
+
+.confirm-dialog .danger-button:hover {
+  border-color: #b91c1c;
+  background: #b91c1c;
+}
+
+@media (max-width: 820px) {
+  .modal.project-node-modal {
+    width: min(100%, 560px);
+  }
+}
+
+@media (max-width: 520px) {
+  .modal.project-node-modal {
+    width: min(100%, 520px);
+  }
 }
 
 .form-actions {

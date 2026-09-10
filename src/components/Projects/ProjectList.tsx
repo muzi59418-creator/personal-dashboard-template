@@ -1,8 +1,9 @@
 import { ChevronDown, ChevronRight, GripVertical, MoreVertical, Plus, Search } from "lucide-react";
-import { useEffect, useMemo, useState, type CSSProperties, type ReactNode } from "react";
+import { useEffect, useMemo, useState, type CSSProperties, type DragEvent, type ReactNode } from "react";
 import type { Category, DiaryEntry, DiaryEntryInput, Idea, IdeaInput, Project, ProjectInput, ProjectQuadrant, ProjectStep, WorkItem, WorkItemInput } from "../../types/dashboard";
 import { PROJECT_QUADRANTS } from "../../types/dashboard";
 import { EmptyState } from "../Common/EmptyState";
+import { ConfirmDialog } from "../Common/ConfirmDialog";
 import { Modal } from "../Common/Modal";
 import { ProjectActionForm, type ProjectActionInput } from "./ProjectActionForm";
 import { ProjectNodeForm } from "./ProjectNodeForm";
@@ -13,9 +14,13 @@ import {
   getEffectiveProjectQuadrant,
   getProjectChildren,
   getProjectDescendantIds,
+  getProjectDropPosition,
+  getProjectNumber,
   getProjectPath,
   getRootProject,
   getRootProjects,
+  type ProjectDropPosition,
+  type ProjectMovePosition,
 } from "../../utils/projectTree";
 import { getProjectProgressSummary } from "../../utils/projectProgress";
 import { getProjectComputedStatus } from "../../utils/projectProgress";
@@ -43,7 +48,7 @@ interface ProjectListProps {
   onUpdateAction: (projectId: string, actionId: string, input: ProjectActionInput) => void;
   onDeleteAction: (projectId: string, actionId: string) => void;
   onMoveAction: (sourceProjectId: string, actionId: string, targetProjectId: string) => void;
-  onMoveProject: (projectId: string, targetParentId: string | null, position: "first" | "last") => void;
+  onMoveProject: (projectId: string, targetParentId: string | null, position: ProjectMovePosition, referenceProjectId?: string) => void;
   onMoveToQuadrant: (projectId: string, quadrant: ProjectQuadrant) => void;
 }
 
@@ -65,13 +70,11 @@ export function ProjectList(props: ProjectListProps) {
   const [movingAction, setMovingAction] = useState<{ project: Project; action: ProjectStep } | null>(null);
   const [selectedProjectId, setSelectedProjectId] = useState("");
   const [search, setSearch] = useState("");
-  const [quadrantFilter, setQuadrantFilter] = useState<"all" | ProjectQuadrant>("all");
-  const [statusFilter, setStatusFilter] = useState<"all" | "未开始" | "进行中" | "已完成">("all");
-  const [sortMode, setSortMode] = useState<"recent" | "progress" | "name">("recent");
   const [collapsedQuadrants, setCollapsedQuadrants] = useState<Set<ProjectQuadrant>>(new Set());
   const [expandedIds, setExpandedIds] = useState<Set<string>>(new Set());
   const [draggedProjectId, setDraggedProjectId] = useState("");
-  const [dropTargetId, setDropTargetId] = useState("");
+  const [dropTarget, setDropTarget] = useState<{ projectId: string; position: ProjectDropPosition } | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<Project | null>(null);
   const selectedProject = projects.find((project) => project.id === selectedProjectId) || null;
   const roots = getRootProjects(projects);
 
@@ -88,11 +91,8 @@ export function ProjectList(props: ProjectListProps) {
 
   const normalizedSearch = search.trim().toLocaleLowerCase();
   const filteredRoots = useMemo(() => roots.filter((root) => {
-    const inQuadrant = quadrantFilter === "all" || getEffectiveProjectQuadrant(root, projects) === quadrantFilter;
-    const statusMatches = statusFilter === "all" || collectSubtree(root, projects).some((project) => getProjectComputedStatus(project, projects) === statusFilter);
-    const searchMatches = !normalizedSearch || collectSubtree(root, projects).some((project) => project.name.toLocaleLowerCase().includes(normalizedSearch));
-    return inQuadrant && statusMatches && searchMatches;
-  }), [normalizedSearch, projects, quadrantFilter, roots, statusFilter]);
+    return !normalizedSearch || collectSubtree(root, projects).some((project) => project.name.toLocaleLowerCase().includes(normalizedSearch));
+  }), [normalizedSearch, projects, roots]);
 
   function toggleExpanded(projectId: string) {
     setExpandedIds((current) => {
@@ -112,30 +112,45 @@ export function ProjectList(props: ProjectListProps) {
     });
   }
 
-  function handleDrop(targetParentId: string | null, position: "first" | "last" = "last") {
-    if (!draggedProjectId) return;
-    const validation = canMoveProject(draggedProjectId, targetParentId, projects);
-    setDropTargetId("");
+  function handleDrop(target: Project, dropPosition: ProjectDropPosition, event?: DragEvent<HTMLElement>) {
+    const sourceId = event?.dataTransfer.getData("text/plain") || draggedProjectId;
+    if (!sourceId || sourceId === target.id) return;
+    const targetParentId = dropPosition === "inside" ? target.id : target.parentId || null;
+    const movePosition: ProjectMovePosition = dropPosition === "inside" ? "last" : dropPosition;
+    const referenceProjectId = dropPosition === "inside" ? undefined : target.id;
+    const validation = canMoveProject(sourceId, targetParentId, projects);
+    setDropTarget(null);
     setDraggedProjectId("");
     if (!validation.ok) {
       window.alert(validation.reason || "不能移动到当前目标。");
       return;
     }
-    onMoveProject(draggedProjectId, targetParentId, position);
+    onMoveProject(sourceId, targetParentId, movePosition, referenceProjectId);
+  }
+
+  function updateDropTarget(event: DragEvent<HTMLElement>, target: Project) {
+    const sourceId = event.dataTransfer.getData("text/plain") || draggedProjectId;
+    if (!sourceId || sourceId === target.id) {
+      setDropTarget(null);
+      return;
+    }
+    const row = event.currentTarget.getBoundingClientRect();
+    const position = getProjectDropPosition(event.clientY - row.top, row.height);
+    const targetParentId = position === "inside" ? target.id : target.parentId || null;
+    const validation = canMoveProject(sourceId, targetParentId, projects);
+    event.dataTransfer.dropEffect = validation.ok ? "move" : "none";
+    setDropTarget(validation.ok ? { projectId: target.id, position } : null);
   }
 
   function handleDeleteProject(project: Project) {
-    const descendantCount = getProjectDescendantIds(project.id, projects).length;
-    const actionCount = collectSubtree(project, projects).reduce((total, item) => total + (item.executionSteps || []).length, 0);
-    const summary = `该项目包含：\n${descendantCount} 个下级项目\n${actionCount} 条推进事项\n\n删除后所有下级内容将一起删除。`;
-    if (!project.parentId) {
-      const confirmation = window.prompt(`删除「${project.name}」？\n\n${summary}\n\n请输入主项目名称确认：`);
-      if (confirmation !== project.name) return;
-    } else if (!window.confirm(`删除「${project.name}」？\n\n${summary}`)) {
-      return;
-    }
-    onDelete(project.id);
+    setDeleteTarget(project);
+  }
+
+  function confirmDeleteProject() {
+    if (!deleteTarget) return;
+    onDelete(deleteTarget.id);
     setSelectedProjectId("");
+    setDeleteTarget(null);
   }
 
   function handleDeleteAction(project: Project, action: ProjectStep) {
@@ -168,17 +183,14 @@ export function ProjectList(props: ProjectListProps) {
 
       <div className="project-tree-toolbar">
         <label className="project-search-field"><Search size={16} /><span className="sr-only">搜索项目</span><input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="搜索项目名称 / 子项目" /></label>
-        <select value={quadrantFilter} onChange={(event) => setQuadrantFilter(event.target.value as "all" | ProjectQuadrant)} aria-label="筛选四象限"><option value="all">全部象限</option>{PROJECT_QUADRANTS.map((quadrant) => <option key={quadrant} value={quadrant}>{quadrantLabels[quadrant]}</option>)}</select>
-        <select value={statusFilter} onChange={(event) => setStatusFilter(event.target.value as typeof statusFilter)} aria-label="筛选项目状态"><option value="all">全部状态</option><option value="未开始">未开始</option><option value="进行中">进行中</option><option value="已完成">已完成</option></select>
-        <select value={sortMode} onChange={(event) => setSortMode(event.target.value as typeof sortMode)} aria-label="项目排序"><option value="recent">最近更新</option><option value="progress">进度</option><option value="name">名称</option></select>
       </div>
 
-      {roots.length === 0 ? <EmptyState title="暂无项目" description="创建一个主项目后，这里会显示项目树。" /> : filteredRoots.length === 0 ? <EmptyState title="没有匹配的项目" description="试试调整搜索或筛选条件。" /> : (
+      {roots.length === 0 ? <EmptyState title="暂无项目" description="创建一个主项目后，这里会显示项目树。" /> : filteredRoots.length === 0 ? <EmptyState title="没有匹配的项目" description="试试调整搜索关键词。" /> : (
         <div className="project-quadrant-list" aria-label="项目四象限">
           {PROJECT_QUADRANTS.map((quadrant) => {
-            const quadrantRoots = sortNodes(filteredRoots.filter((root) => getEffectiveProjectQuadrant(root, projects) === quadrant), sortMode, projects);
+            const quadrantRoots = sortNodes(filteredRoots.filter((root) => getEffectiveProjectQuadrant(root, projects) === quadrant));
             const collapsed = collapsedQuadrants.has(quadrant);
-            return <section className={`project-quadrant-section quadrant-section-${quadrant}`} key={quadrant} onDragOver={(event) => event.preventDefault()} onDrop={(event) => { event.preventDefault(); event.stopPropagation(); if (!draggedProjectId) return; const dragged = projects.find((project) => project.id === draggedProjectId); setDraggedProjectId(""); setDropTargetId(""); if (dragged && !dragged.parentId) onMoveToQuadrant(dragged.id, quadrant); }}>
+            return <section className={`project-quadrant-section quadrant-section-${quadrant}`} key={quadrant} onDragOver={(event) => event.preventDefault()} onDrop={(event) => { event.preventDefault(); event.stopPropagation(); const sourceId = event.dataTransfer.getData("text/plain") || draggedProjectId; if (!sourceId) return; const dragged = projects.find((project) => project.id === sourceId); setDraggedProjectId(""); setDropTarget(null); if (dragged && !dragged.parentId) onMoveToQuadrant(dragged.id, quadrant); }}>
               <button className="project-quadrant-header" type="button" onClick={() => setQuadrantCollapsed(quadrant)} aria-expanded={!collapsed}>
                 <span className="project-quadrant-heading"><span className="project-quadrant-dot" />{quadrantLabels[quadrant]}</span><span className="project-quadrant-count">{quadrantRoots.length} 个 {collapsed ? <ChevronRight size={16} /> : <ChevronDown size={16} />}</span>
               </button>
@@ -190,29 +202,30 @@ export function ProjectList(props: ProjectListProps) {
 
       {selectedProject && <ProjectTreeDrawer project={selectedProject} projects={projects} onClose={() => setSelectedProjectId("")} onSelectProject={setSelectedProjectId} onEditProject={(project) => setProjectForm({ project, parent: project.parentId ? projects.find((item) => item.id === project.parentId) : undefined })} onAddChild={(project) => setProjectForm({ parent: project })} onAddAction={(project) => setActionForm({ project })} onEditAction={(project, action) => setActionForm({ project, action })} onMoveProject={setMovingProject} onMoveAction={(project, action) => setMovingAction({ project, action })} onDeleteProject={handleDeleteProject} onDeleteAction={handleDeleteAction} onToggleAction={(project, action) => onUpdateAction(project.id, action.id, { ...action, status: action.status === "done" ? "todo" : "done", completedAt: action.status === "done" ? "" : action.completedAt })} />}
 
-      {projectForm && <Modal title={projectForm.project ? "编辑" : projectForm.parent ? "新增子项目" : "新增项目"} onClose={() => setProjectForm(null)}><ProjectNodeForm project={projectForm.project} parent={projectForm.parent || undefined} onCancel={() => setProjectForm(null)} onSubmit={(input) => { if (projectForm.project) onUpdate(projectForm.project.id, input); else onCreate(input); setProjectForm(null); }} /></Modal>}
+      {projectForm && <Modal className="project-node-modal" title={getProjectFormTitle(projectForm)} onClose={() => setProjectForm(null)}><ProjectNodeForm project={projectForm.project} parent={projectForm.parent || undefined} onCancel={() => setProjectForm(null)} onSubmit={(input) => { if (projectForm.project) onUpdate(projectForm.project.id, input); else onCreate(input); setProjectForm(null); }} /></Modal>}
       {actionForm && <Modal title={actionForm.action ? "编辑推进事项" : "新增推进事项"} onClose={() => setActionForm(null)}><ProjectActionForm action={actionForm.action} onCancel={() => setActionForm(null)} onSubmit={(input) => { if (actionForm.action) onUpdateAction(actionForm.project.id, actionForm.action.id, input); else onCreateAction(actionForm.project.id, input); setActionForm(null); }} /></Modal>}
       {movingProject && <ProjectMoveModal project={movingProject} projects={projects} onCancel={() => setMovingProject(null)} onMoveProject={onMoveProject} onMoveToQuadrant={onMoveToQuadrant} />}
       {movingAction && <ProjectActionMoveModal project={movingAction.project} action={movingAction.action} projects={projects} onCancel={() => setMovingAction(null)} onMove={(targetId) => { onMoveAction(movingAction.project.id, movingAction.action.id, targetId); setMovingAction(null); }} />}
+      {deleteTarget && <ConfirmDialog open title="确认删除项目？" description={buildProjectDeleteSummary(deleteTarget, projects)} confirmText="确认删除" onCancel={() => setDeleteTarget(null)} onConfirm={confirmDeleteProject} />}
     </section>
   );
 
   function renderProjectNode(project: Project, depth: number): ReactNode {
-    const children = sortNodes(getProjectChildren(projects, project.id), sortMode, projects);
+    const children = sortNodes(getProjectChildren(projects, project.id));
     const expanded = expandedIds.has(project.id) || Boolean(normalizedSearch && collectSubtree(project, projects).some((item) => item.name.toLocaleLowerCase().includes(normalizedSearch)));
     const progress = getProjectProgressSummary(project, projects);
     const status = getProjectComputedStatus(project, projects);
     return <div className="project-tree-branch" key={project.id}>
-      <div className={`project-tree-row${dropTargetId === project.id ? " drop-target" : ""}${selectedProjectId === project.id ? " selected" : ""}`} style={{ "--project-depth": depth } as CSSProperties} draggable onDragStart={(event) => { setDraggedProjectId(project.id); event.dataTransfer.effectAllowed = "move"; event.dataTransfer.setData("text/plain", project.id); }} onDragEnd={() => { setDraggedProjectId(""); setDropTargetId(""); }} onDragOver={(event) => { event.preventDefault(); setDropTargetId(project.id); }} onDrop={(event) => { event.preventDefault(); event.stopPropagation(); handleDrop(project.id, "last"); }} onClick={() => setSelectedProjectId(project.id)} onKeyDown={(event) => { if ((event.key === "Enter" || event.key === " ") && event.target === event.currentTarget) { event.preventDefault(); setSelectedProjectId(project.id); } }} role="button" tabIndex={0}>
+      <div className={`project-tree-row${dropTarget?.projectId === project.id ? ` drop-${dropTarget.position}` : ""}${selectedProjectId === project.id ? " selected" : ""}`} style={{ "--project-depth": depth } as CSSProperties} draggable onDragStart={(event) => { setDraggedProjectId(project.id); event.dataTransfer.effectAllowed = "move"; event.dataTransfer.setData("text/plain", project.id); }} onDragEnd={() => { setDraggedProjectId(""); setDropTarget(null); }} onDragOver={(event) => { event.preventDefault(); updateDropTarget(event, project); }} onDragLeave={() => setDropTarget((current) => current?.projectId === project.id ? null : current)} onDrop={(event) => { event.preventDefault(); event.stopPropagation(); const row = event.currentTarget.getBoundingClientRect(); const position = getProjectDropPosition(event.clientY - row.top, row.height); handleDrop(project, position, event); }} onClick={() => setSelectedProjectId(project.id)} onKeyDown={(event) => { if ((event.key === "Enter" || event.key === " ") && event.target === event.currentTarget) { event.preventDefault(); setSelectedProjectId(project.id); } }} role="button" tabIndex={0} aria-label={`${project.name}。拖到上方同级前插，中部放入子级，下方同级后插`}>
         <button className={`project-tree-chevron${children.length === 0 ? " empty" : ""}`} type="button" aria-label={expanded ? `收起 ${project.name}` : `展开 ${project.name}`} onClick={(event) => { event.stopPropagation(); if (children.length > 0) toggleExpanded(project.id); }} disabled={children.length === 0}>{children.length > 0 && (expanded ? <ChevronDown size={16} /> : <ChevronRight size={16} />)}</button>
         <GripVertical className="project-tree-drag-handle" size={15} aria-hidden="true" />
-        <div className="project-tree-main"><div className="project-tree-title-line"><strong>{project.name}</strong>{project.isDelayed && <span className="project-delayed-text">· 延期</span>}</div><div className="project-tree-subline">{depth === 1 && <span>主项目</span>}{depth > 1 && <span>子项目</span>}{children.length > 0 && <span>{children.length} 个下级</span>}{project.nextAction && <span className="project-tree-next-action">下一步：{project.nextAction}</span>}</div></div>
+        <div className="project-tree-main"><div className="project-tree-title-line"><span className="project-tree-number" aria-hidden="true">{getProjectNumber(project, projects)}</span><strong>{project.name}</strong>{project.isDelayed && <span className="project-delayed-text">· 延期</span>}</div><div className="project-tree-subline">{depth === 1 && <span>主项目</span>}{depth > 1 && <span>子项目</span>}{children.length > 0 && <span>{children.length} 个下级</span>}{project.nextAction && <span className="project-tree-next-action">下一步：{project.nextAction}</span>}</div></div>
         <span className={`project-tree-status status-${status === "已完成" ? "done" : status === "进行中" ? "doing" : "todo"}`}>{status}{project.isDelayed ? " · 延期" : ""}</span>
         <span className="project-tree-progress">{progress.percent === null ? "—" : `${progress.percent}%`}</span>
         <time className="project-tree-updated">{formatShortDate(project.updatedAt)}</time>
         <ProjectNodeMenu project={project} depth={depth} onAddChild={() => setProjectForm({ parent: project })} onAddAction={() => setActionForm({ project })} onEdit={() => setProjectForm({ project, parent: project.parentId ? projects.find((item) => item.id === project.parentId) : undefined })} onMove={() => setMovingProject(project)} onDelete={() => handleDeleteProject(project)} />
       </div>
-      {expanded && children.length > 0 && <div className="project-tree-children">{children.map((child) => renderProjectNode(child, depth + 1))}</div>}<div className="project-tree-insert-zone" onDragOver={(event) => { event.preventDefault(); setDropTargetId(`${project.id}-after`); }} onDrop={(event) => { event.preventDefault(); event.stopPropagation(); handleDrop(project.parentId || null, "last"); }} aria-label={`放置到 ${project.name} 同级末尾`} />
+      {expanded && children.length > 0 && <div className="project-tree-children">{children.map((child) => renderProjectNode(child, depth + 1))}</div>}
     </div>;
   }
 }
@@ -226,16 +239,24 @@ function ProjectStat({ label, value, tone }: { label: string; value: number; ton
   return <div className={`project-stat-card ${tone}`}><span>{label}</span><strong>{value}</strong></div>;
 }
 
+function getProjectFormTitle(state: ProjectFormState): string {
+  if (state.project) return "编辑项目";
+  if (state.parent) return `新增子项目 - ${state.parent.name}`;
+  return "新增主项目";
+}
+
+function buildProjectDeleteSummary(project: Project, projects: Project[]): string {
+  const descendantCount = getProjectDescendantIds(project.id, projects).length;
+  const actionCount = collectSubtree(project, projects).reduce((total, item) => total + (item.executionSteps || []).length, 0);
+  return `项目：${project.name}\n下级项目：${descendantCount} 个\n推进事项：${actionCount} 条\n\n删除后所有下级内容将一起删除。`;
+}
+
 function collectSubtree(project: Project, projects: Project[]): Project[] {
   return [project, ...getProjectChildren(projects, project.id).flatMap((child) => collectSubtree(child, projects))];
 }
 
-function sortNodes(nodes: Project[], mode: "recent" | "progress" | "name", projects: Project[]): Project[] {
-  return [...nodes].sort((a, b) => {
-    if (mode === "name") return a.name.localeCompare(b.name, "zh-CN") || compareProjectOrder(a, b);
-    if (mode === "progress") return (getProjectProgressSummary(b, projects).percent || 0) - (getProjectProgressSummary(a, projects).percent || 0) || compareProjectOrder(a, b);
-    return new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime() || compareProjectOrder(a, b);
-  });
+function sortNodes(nodes: Project[]): Project[] {
+  return [...nodes].sort(compareProjectOrder);
 }
 
 function formatShortDate(value: string): string {
@@ -244,7 +265,7 @@ function formatShortDate(value: string): string {
   return `${String(date.getMonth() + 1).padStart(2, "0")}/${String(date.getDate()).padStart(2, "0")}`;
 }
 
-function ProjectMoveModal({ project, projects, onCancel, onMoveProject, onMoveToQuadrant }: { project: Project; projects: Project[]; onCancel: () => void; onMoveProject: (projectId: string, targetParentId: string | null, position: "first" | "last") => void; onMoveToQuadrant: (projectId: string, quadrant: ProjectQuadrant) => void }) {
+function ProjectMoveModal({ project, projects, onCancel, onMoveProject, onMoveToQuadrant }: { project: Project; projects: Project[]; onCancel: () => void; onMoveProject: (projectId: string, targetParentId: string | null, position: ProjectMovePosition, referenceProjectId?: string) => void; onMoveToQuadrant: (projectId: string, quadrant: ProjectQuadrant) => void }) {
   const isRoot = !project.parentId;
   const [targetParentId, setTargetParentId] = useState(project.parentId || "");
   const [quadrant, setQuadrant] = useState<ProjectQuadrant>(project.quadrant || "important_not_urgent");

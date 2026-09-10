@@ -178,7 +178,7 @@ localStorage.setItem(
   }),
 );
 const migrated = readDashboard();
-assert.equal(migrated.appVersion, "1.6.0", "旧数据迁移补 appVersion");
+assert.equal(migrated.appVersion, "1.6.1", "旧数据迁移补 appVersion");
 assert.equal(migrated.schemaVersion, "1.4.0", "旧数据迁移补 schemaVersion");
 assert.equal(migrated.workItems[0].title, "旧任务", "旧数据迁移不丢失工作记录");
 assert.equal(migrated.routineWorkTemplates[0].frequency, "custom", "旧手动频率兼容为自定义");
@@ -188,7 +188,7 @@ assert.equal(migrated.projects[0].depth, 1, "旧项目迁移为第 1 层");
 assert.equal(migrated.projects[0].isDelayed, false, "旧项目迁移补齐延期字段");
 
 const exported = exportData();
-assert.equal(JSON.parse(exported).appVersion, "1.6.0", "新 JSON 导出包含 appVersion");
+assert.equal(JSON.parse(exported).appVersion, "1.6.1", "新 JSON 导出包含 appVersion");
 assert.equal(JSON.parse(exported).schemaVersion, "1.4.0", "新 JSON 导出包含 schemaVersion");
 const imported = importData(exported);
 assert.equal(imported.workItems[0].title, "旧任务", "新 JSON 可再次导入");

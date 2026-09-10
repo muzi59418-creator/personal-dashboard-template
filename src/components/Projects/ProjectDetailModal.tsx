@@ -20,8 +20,10 @@ import { getProjectComputedStatus } from "../../utils/projectProgress";
 import { DateInput } from "../Common/DateInput";
 import { ImageGallery } from "../Common/ImageGallery";
 import { Modal } from "../Common/Modal";
+import { ConfirmDialog } from "../Common/ConfirmDialog";
 import { WorkItemForm } from "../WorkItems/WorkItemForm";
 import { getProjectQuadrantLabel, getProjectStepStatusLabel, ProjectForm } from "./ProjectForm";
+import { getProjectChildren, getProjectDescendantIds } from "../../utils/projectTree";
 
 export type LinkedRecordRef = { kind: "work" | "diary" | "idea"; id: string };
 
@@ -66,6 +68,7 @@ export function ProjectDetailModal({
   const [textDraft, setTextDraft] = useState("");
   const [editingStepId, setEditingStepId] = useState<string | null>(null);
   const [stepDraft, setStepDraft] = useState<ProjectStep | null>(null);
+  const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
   const progressSummary = getProjectProgressSummary(project, projects);
   const computedStatus = getProjectComputedStatus(project, projects);
   const progressLabel = progressSummary.hasProgressItems ? `${progressSummary.percent}%（${progressSummary.detail}）` : progressSummary.label;
@@ -79,6 +82,7 @@ export function ProjectDetailModal({
   ];
   const hasRelatedContent = relatedWork.length > 0 || relatedDiaries.length > 0 || relatedIdeas.length > 0 || relatedImages.length > 0;
   const nextActionWorkCount = workItems.filter((item) => item.sourceProjectType === "nextAction" && item.sourceProjectId === project.id).length;
+  const deleteSummary = buildProjectDeleteSummary(project, projects);
 
   useEffect(() => {
     function handleKeyDown(event: KeyboardEvent) {
@@ -237,9 +241,7 @@ export function ProjectDetailModal({
                 <button
                   className="danger-button compact-button"
                   type="button"
-                  onClick={() => {
-                    if (window.confirm("确认删除这个项目？关联记录中的项目引用会同步移除。")) onDelete();
-                  }}
+                  onClick={() => setDeleteConfirmOpen(true)}
                 >
                   <Trash2 size={15} />
                   删除
@@ -506,8 +508,29 @@ export function ProjectDetailModal({
           />
         </Modal>
       )}
+      <ConfirmDialog
+        open={deleteConfirmOpen}
+        title="确认删除项目？"
+        description={deleteSummary}
+        confirmText="确认删除"
+        onCancel={() => setDeleteConfirmOpen(false)}
+        onConfirm={() => {
+          onDelete();
+          setDeleteConfirmOpen(false);
+        }}
+      />
     </>
   );
+}
+
+function buildProjectDeleteSummary(project: Project, projects: Project[]): string {
+  const descendantCount = getProjectDescendantIds(project.id, projects).length;
+  const actionCount = collectProjectSubtree(project, projects).reduce((total, item) => total + (item.executionSteps || []).length, 0);
+  return `项目：${project.name}\n下级项目：${descendantCount} 个\n推进事项：${actionCount} 条\n\n删除后所有下级内容将一起删除。`;
+}
+
+function collectProjectSubtree(project: Project, projects: Project[]): Project[] {
+  return [project, ...getProjectChildren(projects, project.id).flatMap((child) => collectProjectSubtree(child, projects))];
 }
 
 function ProjectStepInlineEditor({

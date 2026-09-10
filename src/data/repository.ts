@@ -39,6 +39,7 @@ import {
   getRootProject,
   getRootProjects,
   MAX_PROJECT_DEPTH,
+  type ProjectMovePosition,
 } from "../utils/projectTree";
 
 // 当前实现基于 localStorage，后续可替换为 Supabase / Cloudflare D1 / Firebase。
@@ -598,7 +599,12 @@ export function reorderProjectNodes(parentId: string | null, projectIds: string[
   return data.projects;
 }
 
-export function moveProjectNode(id: string, targetParentId: string | null, position: "first" | "last" = "last"): Project[] {
+export function moveProjectNode(
+  id: string,
+  targetParentId: string | null,
+  position: ProjectMovePosition = "last",
+  referenceProjectId?: string,
+): Project[] {
   const data = readDashboard();
   const project = data.projects.find((item) => item.id === id);
   if (!project) throw new Error("没有找到要移动的项目。");
@@ -607,7 +613,8 @@ export function moveProjectNode(id: string, targetParentId: string | null, posit
   const targetParent = targetParentId ? data.projects.find((item) => item.id === targetParentId) : undefined;
   const oldParentId = project.parentId || null;
   const newSiblings = (targetParent ? getProjectChildren(data.projects, targetParent.id) : getRootProjects(data.projects)).filter((item) => item.id !== id);
-  const orderedIds = position === "first" ? [id, ...newSiblings.map((item) => item.id)] : [...newSiblings.map((item) => item.id), id];
+  const siblingIds = newSiblings.map((item) => item.id);
+  const orderedIds = getMovedSiblingOrder(id, siblingIds, position, referenceProjectId);
   const root = targetParent ? getRootProject(targetParent, data.projects) : project;
   const now = new Date().toISOString();
   const movedIds = new Set([id, ...getProjectDescendantIds(id, data.projects)]);
@@ -629,6 +636,14 @@ export function moveProjectNode(id: string, targetParentId: string | null, posit
   if (oldParentId !== nextParentId) data.projects = normalizeSiblingSortOrders(data.projects, oldParentId);
   save(data);
   return data.projects;
+}
+
+function getMovedSiblingOrder(id: string, siblingIds: string[], position: ProjectMovePosition, referenceProjectId?: string): string[] {
+  if (position === "first") return [id, ...siblingIds];
+  if (position === "last") return [...siblingIds, id];
+  if (!referenceProjectId || !siblingIds.includes(referenceProjectId)) throw new Error("项目排序目标无效。");
+  const targetIndex = siblingIds.indexOf(referenceProjectId) + (position === "after" ? 1 : 0);
+  return [...siblingIds.slice(0, targetIndex), id, ...siblingIds.slice(targetIndex)];
 }
 
 export function moveProjectToQuadrant(id: string, quadrant: ProjectQuadrant): Project {

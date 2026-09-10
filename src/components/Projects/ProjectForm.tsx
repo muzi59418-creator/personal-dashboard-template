@@ -49,6 +49,7 @@ export function ProjectForm({ project, onCancel, onSubmit, initialBlankStep = fa
   const [riskNotes, setRiskNotes] = useState(project?.riskNotes || "");
   const [completionResult, setCompletionResult] = useState(project?.completionResult || "");
   const [retrospective, setRetrospective] = useState(project?.retrospective || "");
+  const [isDelayed, setIsDelayed] = useState(project?.isDelayed === true);
   const [error, setError] = useState("");
   const progressSummary = getProjectProgressSummary(project ? { ...project, executionSteps } : { executionSteps }, projects);
 
@@ -79,6 +80,7 @@ export function ProjectForm({ project, onCancel, onSubmit, initialBlankStep = fa
       nextAction: nextAction.trim(),
       blockers: blockers.trim(),
       riskNotes: riskNotes.trim(),
+      isDelayed,
       completionResult: completionResult.trim(),
       retrospective: retrospective.trim(),
     });
@@ -157,6 +159,10 @@ export function ProjectForm({ project, onCancel, onSubmit, initialBlankStep = fa
             <DateInput value={dueDate} onChange={(event) => setDueDate(event.target.value)} />
           </label>
         </div>
+        <label className="checkbox-field">
+          <input type="checkbox" checked={isDelayed} onChange={(event) => setIsDelayed(event.target.checked)} />
+          <span>延期</span>
+        </label>
       </ProjectFormSection>
 
       <ProjectFormSection title="项目背景与目标">
