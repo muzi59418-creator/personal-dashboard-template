@@ -23,6 +23,12 @@
 - 含真实个人或业务信息的截图、头像、二维码、公司 Logo、客户素材：未发现；README 展示图均为当前真实页面配合通用演示数据制作。
 - 真实业务数据：已替换为通用演示数据。
 
+## GitHub Pages 部署复核
+
+- Pages 工作流只注入仓库名对应的 `PAGES_BASE_PATH`，并显式将 `VITE_SUPABASE_URL` 与 `VITE_SUPABASE_PUBLISHABLE_KEY` 置为空。
+- 公开构建因此保持 localStorage + 通用演示数据模式，不读取或修改任何私人 Supabase 项目；用户自行部署时必须使用自己的 Supabase 项目，并确认 RLS 与数据隔离策略。
+- Vite 在 Pages 子目录使用 `/<仓库名>/`，本地开发及根域部署使用 `/`；当前应用没有真实 URL 路由，也没有需要 fallback 的子页面。
+
 ## 发布前确认
 
 - 原项目仅用于只读复制，未修改原项目文件、Git 状态、分支、远程仓库或提交记录。

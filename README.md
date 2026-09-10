@@ -6,6 +6,12 @@
 
 当前版本：**v1.6.1** · [查看更新日志](CHANGELOG.md)
 
+## 在线体验
+
+GitHub Pages：[https://muzi59418-creator.github.io/personal-dashboard-template/](https://muzi59418-creator.github.io/personal-dashboard-template/)
+
+> 部署完成后启用。该页面用于公开体验仪表板界面与功能；开源版与私人正式版数据隔离，用户如需自行部署，可 Fork 仓库后配置自己的环境。
+
 ## v1.6.1
 
 - 项目树拖拽按上 / 中 / 下三段命中：上、下为同级插入线，中部为子级高亮；同级排序不改 `parentId`，父项目携带整棵子树移动，最多 5 层。
@@ -144,6 +150,14 @@ npm run test:sync
 - 导入失败时不会覆盖当前数据。
 
 ## 部署方式
+
+### GitHub Pages
+
+仓库已包含 GitHub Actions 部署工作流：推送到 `main` 或手动运行 `workflow_dispatch` 后，会依次执行依赖安装、类型检查、核心测试和生产构建，并将 `dist` 发布到 GitHub Pages。
+
+GitHub Pages 构建会自动使用 `/<仓库名>/` 作为 Vite base；本地开发以及 Vercel、Cloudflare Pages 等根目录部署默认使用 `/`。公开构建不会注入 Supabase 配置，因此默认展示通用演示数据并使用浏览器本地存储。
+
+首次启用时，在 GitHub 仓库的 **Settings → Pages → Build and deployment → Source** 选择 **GitHub Actions**。
 
 ### Vercel
 
