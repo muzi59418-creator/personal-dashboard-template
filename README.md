@@ -6,6 +6,15 @@
 
 当前版本：**v1.6.2** · [查看更新日志](CHANGELOG.md)
 
+## GitHub 仓库与重要内容
+
+- GitHub 仓库：[personal-dashboard-template](https://github.com/muzi59418-creator/personal-dashboard-template)
+- 当前版本：`v1.6.2`
+- 核心能力：项目管理与推进事项、今日任务、工作日记、灵感、例行工作、JSON 备份恢复。
+- 数据策略：默认使用浏览器 localStorage；配置 Supabase 后可启用邮箱登录与受控云端保存，公开构建不连接私人正式库。
+- 公开社交入口：侧栏展示小红书号 `920528061`，可打开主页或查看二维码。
+- 重要文件：`CHANGELOG.md`、`docs/VERSIONING.md`、`src/data/socialProfile.ts`。
+
 ## v1.6.2
 
 1. 精简项目列表，移除重复的“子项目”和下级数量提示，让项目层级更清晰。
