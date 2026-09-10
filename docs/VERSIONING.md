@@ -28,6 +28,12 @@
 - 不篡改旧 Git 历史、旧 Tag 或已发布版本记录。
 - 仅在无冲突时新增 `v1.0.0` 基线 Tag。
 
+## 部署基础设施版本边界
+
+- GitHub Pages 工作流、Vite base 适配和公开部署文档属于开源基础设施变更，不修改 `APP_VERSION`、`SCHEMA_VERSION`、数据结构、localStorage key、Supabase 表结构或云同步载荷。
+- 本次公开体验部署不纳入 v1.6.2 或其他正式版本的功能清单，保持在 `Unreleased` 记录中，待用户确认后再决定后续发布安排。
+- 本次不创建 Git Tag、GitHub Release，也不改变既有版本的提交历史。
+
 ## 数据兼容
 
 - 浏览器本地数据继续使用 `personal-dashboard-template:v1` 存储键。
