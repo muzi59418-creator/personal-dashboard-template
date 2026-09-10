@@ -15,7 +15,7 @@ export function ProjectOverview({ projects }: ProjectOverviewProps) {
 
   return (
     <section className="wide-panel">
-      <div className="project-overview-columns">
+      <div className="project-overview-stack">
         <ProjectOverviewGroup title="工作项目看板" emptyTitle="暂无工作项目" projects={workProjects} allProjects={projects} />
         <ProjectOverviewGroup title="个人项目看板" emptyTitle="暂无个人项目" projects={personalProjects} allProjects={projects} />
       </div>

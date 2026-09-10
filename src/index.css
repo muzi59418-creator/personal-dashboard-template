@@ -1441,11 +1441,12 @@ button.mobile-sidebar-toggle {
   grid-template-columns: repeat(4, minmax(0, 1fr));
 }
 
-.project-overview-columns {
+.project-overview-stack {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-columns: minmax(0, 1fr);
   gap: 16px;
   align-items: stretch;
+  min-width: 0;
 }
 
 .project-overview-group {
@@ -5366,7 +5367,7 @@ legend {
 
   .dashboard-grid,
   .project-grid,
-  .project-overview-columns,
+  .project-overview-stack,
   .idea-grid,
   .settings-grid,
   .data-status-grid,
