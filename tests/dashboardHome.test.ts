@@ -63,7 +63,6 @@ const socialSidebarHtml = renderToStaticMarkup(createElement(Sidebar, {
   onNavigate: () => undefined,
   onToggleCollapsed: () => undefined,
   onClose: () => undefined,
-  accountName,
   socialProfile: {
     platformLabel: "小红书",
     accountId: "demo-account",

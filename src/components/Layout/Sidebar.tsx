@@ -99,7 +99,7 @@ export function Sidebar({ activeView, collapsed, mobileOpen, onNavigate, onToggl
             <span className="sidebar-account-name">{accountName}</span>
           </div>
         )}
-        {accountName && socialProfile && (
+        {socialProfile && (
           <div className="sidebar-social" aria-label={`${socialProfile.platformLabel}账号`}>
             <a className="sidebar-social-link" href={socialProfile.profileUrl} target="_blank" rel="noopener noreferrer" aria-label={`打开${socialProfile.platformLabel}主页`}>
               <span className="sidebar-social-copy">

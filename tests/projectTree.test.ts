@@ -160,6 +160,7 @@ const sourceChecks = [
   ["src/components/Settings/BackupPanel.tsx", /storage-notice/, "存储说明轻量提示"],
   ["src/components/Layout/Sidebar.tsx", /sidebar-social[\s\S]*target="_blank"[\s\S]*noopener noreferrer/, "可配置社交账号安全外链"],
   ["src/components/Layout/Sidebar.tsx", /sidebar-qr-overlay[\s\S]*aria-modal="true"/, "二维码居中弹窗"],
+  ["src/App.tsx", /import \{ socialProfile \} from "\.\/data\/socialProfile"[\s\S]*socialProfile=\{socialProfile\}/, "开源版加载公开小红书配置"],
 ] as const;
 for (const [file, pattern, label] of sourceChecks) {
   assert.match(readFileSync(file, "utf8"), pattern, label);
@@ -170,6 +171,9 @@ assert.match(projectListSource, /depth < 5/, "第 5 层隐藏新增子项目入�
 const backupPanelSource = readFileSync("src/components/Settings/BackupPanel.tsx", "utf8");
 assert.match(backupPanelSource, /当前使用本地存储，数据保存在当前浏览器中；后续计划支持云端保存、多设备同步和访问控制。/, "存储说明使用统一轻提示文案");
 assert.doesNotMatch(backupPanelSource, /<h3>当前存储模式|<h3>后续计划|localStorage 本地原型/, "存储说明不再展示旧的大卡片文案");
+const socialProfileSource = readFileSync("src/data/socialProfile.ts", "utf8");
+assert.match(socialProfileSource, /920528061/, "开源版包含公开小红书号");
+assert.match(socialProfileSource, /https:\/\/xhslink\.cn\/o\/68nayEhvblv/, "开源版包含公开主页链接");
 
 assert.equal(getProjectDescendantIds("number-root", numberingProjects).length, 5, "完整五层结构可遍历");
 assert.equal(getRootProjects(numberingProjects).length, 2, "主项目按根节点识别");

@@ -57,6 +57,7 @@ import {
   updateWorkItem,
 } from "./data/repository";
 import { readSidebarCollapsed, writeSidebarCollapsed } from "./data/uiPreferences";
+import { socialProfile } from "./data/socialProfile";
 import { todayInputValue } from "./utils/date";
 import { MobileTabBar } from "./components/Layout/MobileTabBar";
 import { Sidebar, type ViewKey } from "./components/Layout/Sidebar";
@@ -267,6 +268,7 @@ function DashboardApp({ accountName, onSignOut, cloudProbe, onCloudInitialized }
           onToggleCollapsed={toggleSidebarCollapsed}
           onClose={() => setMobileMenuOpen(false)}
           accountName={accountName}
+          socialProfile={socialProfile}
           onSignOut={onSignOut}
         />
         <main className="main-content">
