@@ -4,16 +4,25 @@ import {
   ChevronLeft,
   ChevronRight,
   ClipboardList,
+  ExternalLink,
   FolderKanban,
   LayoutDashboard,
   Lightbulb,
   LogOut,
+  QrCode,
   Settings,
   X,
 } from "lucide-react";
 import { APP_VERSION } from "../../data/appVersion";
 
 export type ViewKey = "dashboard" | "diary" | "work" | "ideas" | "projects" | "categories" | "settings";
+
+export interface SidebarSocialProfile {
+  platformLabel: string;
+  accountId: string;
+  profileUrl: string;
+  qrImage: string;
+}
 
 export const navItems: Array<{ key: ViewKey; label: string; icon: typeof LayoutDashboard }> = [
   { key: "dashboard", label: "仪表盘", icon: LayoutDashboard },
@@ -33,10 +42,21 @@ interface SidebarProps {
   onClose: () => void;
   accountName?: string;
   onSignOut?: () => Promise<void>;
+  socialProfile?: SidebarSocialProfile;
 }
 
-export function Sidebar({ activeView, collapsed, mobileOpen, onNavigate, onToggleCollapsed, onClose, accountName, onSignOut }: SidebarProps) {
+export function Sidebar({ activeView, collapsed, mobileOpen, onNavigate, onToggleCollapsed, onClose, accountName, onSignOut, socialProfile }: SidebarProps) {
   const now = useLiveTime();
+  const [qrOpen, setQrOpen] = useState(false);
+
+  useEffect(() => {
+    if (!qrOpen) return;
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") setQrOpen(false);
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [qrOpen]);
 
   return (
     <>
@@ -79,6 +99,20 @@ export function Sidebar({ activeView, collapsed, mobileOpen, onNavigate, onToggl
             <span className="sidebar-account-name">{accountName}</span>
           </div>
         )}
+        {accountName && socialProfile && (
+          <div className="sidebar-social" aria-label={`${socialProfile.platformLabel}账号`}>
+            <a className="sidebar-social-link" href={socialProfile.profileUrl} target="_blank" rel="noopener noreferrer" aria-label={`打开${socialProfile.platformLabel}主页`}>
+              <span className="sidebar-social-copy">
+                <span className="sidebar-social-platform">{socialProfile.platformLabel}号</span>
+                <strong>{socialProfile.accountId}</strong>
+              </span>
+              <ExternalLink size={14} aria-hidden="true" />
+            </a>
+            <button className="sidebar-social-qr" type="button" aria-label={`查看${socialProfile.platformLabel}二维码`} title={`查看${socialProfile.platformLabel}二维码`} onClick={() => setQrOpen(true)}>
+              <QrCode size={17} aria-hidden="true" />
+            </button>
+          </div>
+        )}
         {onSignOut && (
           <button className="nav-button sidebar-sign-out" type="button" title={collapsed ? "退出登录" : undefined} onClick={() => void onSignOut()}>
             <LogOut size={18} />
@@ -92,6 +126,20 @@ export function Sidebar({ activeView, collapsed, mobileOpen, onNavigate, onToggl
         </div>
       </aside>
       {mobileOpen && <button className="sidebar-scrim" type="button" aria-label="关闭菜单遮罩" onClick={onClose} />}
+      {qrOpen && socialProfile && (
+        <div className="sidebar-qr-overlay">
+          <button className="sidebar-qr-backdrop" type="button" aria-label="关闭二维码" onClick={() => setQrOpen(false)} />
+          <section className="sidebar-qr-dialog" role="dialog" aria-modal="true" aria-label={`${socialProfile.platformLabel}二维码`}>
+            <div className="sidebar-qr-dialog-head">
+              <strong>{socialProfile.platformLabel}二维码</strong>
+              <button className="icon-button" type="button" aria-label="关闭二维码" title="关闭二维码" onClick={() => setQrOpen(false)}>
+                <X size={18} />
+              </button>
+            </div>
+            <img src={socialProfile.qrImage} alt={`${socialProfile.platformLabel}二维码`} />
+          </section>
+        </div>
+      )}
     </>
   );
 }

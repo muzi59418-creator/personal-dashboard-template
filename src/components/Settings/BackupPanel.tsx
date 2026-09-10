@@ -1,5 +1,5 @@
 import { useRef, useState, type ReactNode } from "react";
-import { Download, RotateCcw, Trash2, Upload } from "lucide-react";
+import { Cloud, Download, RotateCcw, Trash2, Upload } from "lucide-react";
 import type { DashboardData } from "../../types/dashboard";
 import { createBackupFileName, downloadJsonFile, validateDashboardBackupJson } from "../../utils/backupUtils";
 import { getLocalDataStatus } from "../../utils/storageHealth";
@@ -82,20 +82,9 @@ export function BackupPanel({ data, onExport, onImport, onClear, cloudSyncPanel 
           <h2>设置 / 备份</h2>
         </div>
       </div>
-      <section className="panel settings-grid">
-        <article className="settings-card">
-          <h3>当前存储模式</h3>
-          <p>localStorage 本地原型</p>
-          <span>
-            应用版本：v{data.appVersion || data.version}。数据只保存在当前浏览器本地。最近更新：
-            {new Date(data.updatedAt).toLocaleString("zh-CN")}
-          </span>
-        </article>
-        <article className="settings-card">
-          <h3>后续计划</h3>
-          <p>云端数据库、自动保存、多设备同步、访问控制</p>
-          <span>当前版本不接入真实云端服务，也不写入账号、密码、API Key 或 token。</span>
-        </article>
+      <section className="panel storage-notice" aria-label="存储说明">
+        <span className="storage-notice-icon" aria-hidden="true"><Cloud size={18} /></span>
+        <p>当前使用本地存储，数据保存在当前浏览器中；后续计划支持云端保存、多设备同步和访问控制。</p>
       </section>
       {cloudSyncPanel}
       <section className="panel local-data-status-card">

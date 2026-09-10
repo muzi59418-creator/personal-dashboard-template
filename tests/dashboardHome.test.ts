@@ -56,4 +56,26 @@ assert.match(sidebarHtml, new RegExp(accountName.replace(/[.*+?^${}()|[\]\\]/g, 
 assert.match(sidebarHtml, /sidebar-account-avatar/);
 assert.match(sidebarHtml, /退出登录/);
 
+const socialSidebarHtml = renderToStaticMarkup(createElement(Sidebar, {
+  activeView: "dashboard",
+  collapsed: false,
+  mobileOpen: false,
+  onNavigate: () => undefined,
+  onToggleCollapsed: () => undefined,
+  onClose: () => undefined,
+  accountName,
+  socialProfile: {
+    platformLabel: "小红书",
+    accountId: "demo-account",
+    profileUrl: "https://example.com/profile",
+    qrImage: "/demo-qr.png",
+  },
+  onSignOut: async () => undefined,
+}));
+assert.match(socialSidebarHtml, /sidebar-social/);
+assert.match(socialSidebarHtml, /demo-account/);
+assert.match(socialSidebarHtml, /target="_blank"/);
+assert.match(socialSidebarHtml, /noopener noreferrer/);
+assert.match(socialSidebarHtml, /sidebar-social-qr/);
+
 console.log("dashboard home tests passed");
