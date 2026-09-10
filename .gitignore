@@ -18,3 +18,4 @@ coverage
 .cache
 .vite
 .codex-run/
+output/
