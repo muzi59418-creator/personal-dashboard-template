@@ -28,7 +28,9 @@ export function ChangelogPanel() {
                         <h4>{getEntryTitle(entry.title)}</h4>
                         <span className={`changelog-type ${entry.type}`}>{entry.type}</span>
                       </div>
-                      <p>{entry.summary}</p>
+                      <ol className="changelog-item-changes">
+                        {getEntryItems(entry).map((item) => <li key={item}>{item}</li>)}
+                      </ol>
                     </div>
                   </article>
                 ))}
@@ -63,4 +65,9 @@ function getEntryVersion(title: string): string {
 
 function getEntryTitle(title: string): string {
   return title.replace(/^v\d+\.\d+\.\d+\s*/, "");
+}
+
+function getEntryItems(entry: (typeof changelogEntries)[number]): string[] {
+  if (entry.items && entry.items.length > 0) return entry.items;
+  return entry.summary?.split("；").map((item) => item.trim()).filter(Boolean) || [];
 }

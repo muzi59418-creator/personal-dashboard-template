@@ -38,11 +38,11 @@ export function WorkPreview({ categories, items, projects, onOpenWork, onOpenPro
       <section className={`panel dashboard-equal-panel today-work-panel${isWorkbenchEmpty ? " today-work-panel-empty" : ""}`}>
         <div className="section-head">
           <div>
-            <h2>今日工作台</h2>
+            <h2>今日任务</h2>
           </div>
           <div className="section-head-actions">
             <button className="text-button today-completed-link" type="button" onClick={() => setShowCompletedToday(true)}>
-              今日已完成 {completedTodayItems.length} 条
+              已完成 {completedTodayItems.length} 项
             </button>
             {priorityItems.length > 3 && (
               <button className="text-button" type="button" onClick={() => setShowTodayAll(true)}>
@@ -55,7 +55,7 @@ export function WorkPreview({ categories, items, projects, onOpenWork, onOpenPro
         <div className={`today-workbench-section${visiblePriorityItems.length === 0 ? " today-workbench-section-empty" : ""}`}>
           <div className="today-workbench-title">
             <h3>优先处理</h3>
-            <span>最多显示 3 条</span>
+            <span>最多显示 3 项</span>
           </div>
           {visiblePriorityItems.length === 0 ? (
             <p className="today-workbench-empty">暂无优先处理事项</p>
@@ -81,7 +81,7 @@ export function WorkPreview({ categories, items, projects, onOpenWork, onOpenPro
         <div className={`today-workbench-section${pendingRoutineItems.length === 0 ? " today-workbench-section-empty" : ""}`}>
           <div className="today-workbench-title">
             <h3>今日例行</h3>
-            <span>{pendingRoutineItems.length} 条</span>
+            <span>{pendingRoutineItems.length} 项</span>
           </div>
           {pendingRoutineItems.length === 0 ? (
             <p className="today-workbench-empty">暂无待处理例行工作</p>
@@ -150,7 +150,7 @@ export function WorkPreview({ categories, items, projects, onOpenWork, onOpenPro
         </Modal>
       )}
       {showCompletedToday && (
-        <Modal title={`今日已完成 ${completedTodayItems.length} 条`} onClose={() => setShowCompletedToday(false)}>
+        <Modal title={`已完成 ${completedTodayItems.length} 项`} onClose={() => setShowCompletedToday(false)}>
           {completedTodayItems.length === 0 ? (
             <EmptyState title="今天还没有完成记录" description="" />
           ) : (

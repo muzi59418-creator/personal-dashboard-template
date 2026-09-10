@@ -624,7 +624,18 @@ button.mobile-sidebar-toggle {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 12px 14px;
-  align-items: stretch;
+  align-items: start;
+}
+
+.dashboard-column {
+  display: grid;
+  align-content: start;
+  gap: 12px;
+  min-width: 0;
+}
+
+.dashboard-column .wide-panel {
+  grid-column: auto;
 }
 
 .wide-panel {
@@ -3211,15 +3222,30 @@ legend {
   font-weight: 850;
 }
 
-.changelog-item-body p {
-  display: -webkit-box;
+.changelog-item-changes {
+  display: grid;
+  gap: 4px;
   margin: 0;
-  overflow: hidden;
+  padding: 0;
   color: var(--muted);
   font-size: 13px;
   line-height: 1.55;
-  -webkit-line-clamp: 2;
-  -webkit-box-orient: vertical;
+  list-style: none;
+  counter-reset: changelog-item;
+}
+
+.changelog-item-changes li {
+  position: relative;
+  padding-left: 1.7em;
+  counter-increment: changelog-item;
+}
+
+.changelog-item-changes li::before {
+  position: absolute;
+  left: 0;
+  color: #64748b;
+  content: counter(changelog-item) "、";
+  font-weight: 750;
 }
 
 .changelog-type {

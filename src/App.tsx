@@ -457,33 +457,37 @@ function DashboardHome({ data, actions, onNavigate }: DashboardHomeProps) {
     <div className="dashboard-home">
       <StatCards data={data} onOpenRecordDetail={setRecordDetail} onUpdateWork={actions.updateWork} />
       <div className="dashboard-grid">
-        <QuickCapture
-          categories={data.categories}
-          projects={data.projects}
-          onCreateDiary={actions.createDiary}
-          onCreateIdea={actions.createIdeaAction}
-          onCreateWorkItem={actions.createWork}
-        />
-        <WorkCompletionOverview items={data.workItems} />
-        <WorkPreview
-          categories={data.categories}
-          items={data.workItems}
-          projects={data.projects}
-          onUpdateWork={actions.updateWork}
-          onUpdateProject={actions.updateProjectAction}
-          onSkipRoutineWork={actions.skipRoutineWorkAction}
-          onPostponeRoutineWork={actions.postponeRoutineWorkAction}
-          onOpenWork={(workId) => {
-            const selected = data.workItems.find((item) => item.id === workId);
-            setRecordDetail({ id: workId, kind: "work", title: selected?.title || "", status: selected?.status || "" });
-          }}
-          onOpenProject={(projectId) => {
-            const selected = data.projects.find((item) => item.id === projectId);
-            setRecordDetail({ id: projectId, kind: "project", title: selected?.name || "", status: selected?.status || "" });
-          }}
-        />
-        <DiaryPreview entries={data.diaryEntries} projects={data.projects} onViewAll={() => onNavigate("diary")} />
-        <ProjectOverview projects={data.projects} />
+        <div className="dashboard-column dashboard-column-left">
+          <QuickCapture
+            categories={data.categories}
+            projects={data.projects}
+            onCreateDiary={actions.createDiary}
+            onCreateIdea={actions.createIdeaAction}
+            onCreateWorkItem={actions.createWork}
+          />
+          <WorkPreview
+            categories={data.categories}
+            items={data.workItems}
+            projects={data.projects}
+            onUpdateWork={actions.updateWork}
+            onUpdateProject={actions.updateProjectAction}
+            onSkipRoutineWork={actions.skipRoutineWorkAction}
+            onPostponeRoutineWork={actions.postponeRoutineWorkAction}
+            onOpenWork={(workId) => {
+              const selected = data.workItems.find((item) => item.id === workId);
+              setRecordDetail({ id: workId, kind: "work", title: selected?.title || "", status: selected?.status || "" });
+            }}
+            onOpenProject={(projectId) => {
+              const selected = data.projects.find((item) => item.id === projectId);
+              setRecordDetail({ id: projectId, kind: "project", title: selected?.name || "", status: selected?.status || "" });
+            }}
+          />
+        </div>
+        <div className="dashboard-column dashboard-column-right">
+          <WorkCompletionOverview items={data.workItems} />
+          <DiaryPreview entries={data.diaryEntries} projects={data.projects} onViewAll={() => onNavigate("diary")} />
+          <ProjectOverview projects={data.projects} />
+        </div>
       </div>
       {workItem && (
         <WorkItemDetailModal
